@@ -1,0 +1,85 @@
+site_name: Proxmox Lab Infrastructure Training
+site_url: https://dmaljkovic.github.io/proxmox-lab/
+repo_url: https://github.com/dmaljkovic/proxmox-lab
+repo_name: dmaljkovic/proxmox-lab
+edit_uri: edit/main/docs/
+
+extra:
+  author: dmaljkovic
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+nav:
+  - Home: index.md
+  - Preparation:
+    - 01-preparation/01-rescue-mode.md
+    - 01-preparation/02-zfs-setup.md
+    - 01-preparation/03-proxmox-install.md
+  - VM Creation:
+    - 02-vm-creation/01-overview.md
+    - 02-vm-creation/02-rocketchat-vm.md
+    - 02-vm-creation/03-nextcloud-vm.md
+    - 02-vm-creation/04-nginx-proxy-vm.md
+    - 02-vm-creation/05-mkdocs-vm.md
+    - 02-vm-creation/06-ldap-vm.md
+    - 02-vm-creation/07-keycloak-vm.md
+  - Software Installation:
+    - 03-software/01-rocketchat.md
+    - 03-software/02-nextcloud.md
+    - 03-software/03-nginx-reverse-proxy.md
+    - 03-software/04-keycloak-oidc.md
+  - Security:
+    - 04-security/01-firewall.md
+    - 04-security/02-fail2ban.md
+    - 04-security/03-backup-snapshots.md
+    - 04-security/04-cis-hardening.md
+  - Monitoring:
+    - 05-monitoring/01-prometheus-grafana.md
+    - 05-monitoring/02-hetzner-monitoring.md
+  - Maintenance:
+    - 06-maintenance/01-updates.md
+    - 06-maintenance/02-rollback.md
+    - 06-maintenance/03-doc-update.md
+  - Diagrams:
+    - 07-diagrams/topology.mmd
+    - 07-diagrams/flowchart.mmd
+
+copyright: Copyright &copy; 2026 dmaljkovic
