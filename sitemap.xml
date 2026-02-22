@@ -2,98 +2,98 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/01-preparation/01-rescue-mode/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
-         <loc>https://dmaljkovic.github.io/proxmox-lab/01-preparation/02-zfs-setup/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <loc>https://dmaljkovic.github.io/proxmox-lab/01-preparation/02-proxmox-installation/</loc>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
-         <loc>https://dmaljkovic.github.io/proxmox-lab/01-preparation/03-proxmox-install/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <loc>https://dmaljkovic.github.io/proxmox-lab/01-preparation/03-network-configuration/</loc>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/02-vm-creation/01-overview/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/02-vm-creation/02-rocketchat-vm/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/02-vm-creation/03-nextcloud-vm/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/02-vm-creation/04-nginx-proxy-vm/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/02-vm-creation/05-mkdocs-vm/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/02-vm-creation/06-ldap-vm/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/02-vm-creation/07-keycloak-vm/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/03-software/01-rocketchat/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/03-software/02-nextcloud/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/03-software/03-nginx-reverse-proxy/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/03-software/04-keycloak-oidc/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/04-security/01-firewall/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/04-security/02-fail2ban/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/04-security/03-backup-snapshots/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/04-security/04-cis-hardening/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/05-monitoring/01-prometheus-grafana/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/05-monitoring/02-hetzner-monitoring/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/06-maintenance/01-updates/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/06-maintenance/02-rollback/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
     <url>
          <loc>https://dmaljkovic.github.io/proxmox-lab/06-maintenance/03-doc-update/</loc>
-         <lastmod>2026-02-19</lastmod>
+         <lastmod>2026-02-22</lastmod>
     </url>
 </urlset>
