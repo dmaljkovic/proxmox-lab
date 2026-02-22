@@ -51,8 +51,8 @@ nav:
   - Home: index.md
   - Preparation:
     - 01-preparation/01-rescue-mode.md
-    - 01-preparation/02-zfs-setup.md
-    - 01-preparation/03-proxmox-install.md
+    - 01-preparation/02-proxmox-installation.md
+    - 01-preparation/03-network-configuration.md
   - VM Creation:
     - 02-vm-creation/01-overview.md
     - 02-vm-creation/02-rocketchat-vm.md
