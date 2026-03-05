@@ -10,9 +10,9 @@ Brief description: Create VM-103 for Nginx reverse proxy with 1 vCPU, 2GB RAM, a
 - **RAM**: 2 GiB
 - **Disk**: 10 GiB (ZFS)
 - **OS**: Ubuntu Server 24.04 LTS
-- **Network**: vmbr0 (public network)
-- **Static IP**: Your Hetzner public IP/26
-- **Gateway**: Your Hetzner gateway
+- **Network**: vmbr2 (private internal network with port forwarding)
+- **Static IP**: 192.168.192.20/18
+- **Gateway**: 192.168.192.5
 - **Purpose**: Reverse proxy and SSL termination
 
 ## Prerequisites
@@ -76,13 +76,13 @@ Click **Next**
 
 ### Step 8: Network Tab
 
-- **Bridge**: vmbr0 (public network)
+- **Bridge**: vmbr2 (private internal network)
 - **Model**: VirtIO
 
 Click **Next**
 
-!!! note "vmbr0 Configuration"
-    This VM uses the public network (vmbr0) for direct internet access. It handles incoming HTTPS/HTTP traffic.
+!!! note "vmbr2 Configuration with Port Forwarding"
+    This VM uses the internal private network (vmbr2). Port forwarding from vmbr0 (host) will forward ports 80/443 to this VM. See [Network Configuration](../01-preparation/03-network-configuration.md) for the iptables rules.
 
 ### Step 9: Confirm
 
@@ -109,9 +109,10 @@ Click **Finish**
 **Network Configuration**:
 - Select the network interface (ens18)
 - Choose **Configure network manually**
-- Enter your Hetzner public IP details:
-  - **IP Address**: YOUR_IP/26 (e.g., 192.168.1.100/26)
-  - **Gateway**: YOUR_GATEWAY (e.g., 192.168.1.1)
+- Enter:
+  - **IP Address**: 192.168.192.20
+  - **Netmask**: 255.255.192.0 (/18)
+  - **Gateway**: 192.168.192.5
   - **Name servers**: 8.8.8.8, 1.1.1.1
 
 **Profile**:
@@ -128,7 +129,7 @@ Click **Finish**
 After reboot:
 
 ```bash
-# Check IP
+# Verify IP
 ip addr show
 
 # Verify gateway
@@ -145,7 +146,7 @@ sudo apt install -y curl vim htop
 
 Add to inventory:
 ```
-nginx-proxy | 103 | vmbr0 | YOUR_PUBLIC_IP | proxy.example.com | Nginx Port 80/443
+nginx-proxy | 103 | vmbr2 | 192.168.192.20 | proxy.example.com | Nginx Port 80/443
 ```
 
 ## Verification

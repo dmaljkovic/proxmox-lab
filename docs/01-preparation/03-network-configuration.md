@@ -121,6 +121,45 @@ systemctl restart networking
 
 ---
 
+## Port Forwarding for Nginx Proxy
+
+Since all VMs are on vmbr2 (private network), we need to forward ports 80 and 443 from vmbr0 (public) to the nginx-proxy VM.
+
+### Create Port Forwarding Script
+
+Create a script to set up port forwarding:
+
+```bash
+sudo nano /etc/network/if-pre-up.d/iptables-nat-forward
+```
+
+Add the following content:
+
+```bash
+#!/bin/sh
+/sbin/iptables -t nat -A PREROUTING -i vmbr0 -p tcp --dport 80 -j DNAT --to-destination 192.168.192.20:80
+/sbin/iptables -t nat -A PREROUTING -i vmbr0 -p tcp --dport 443 -j DNAT --to-destination 192.168.192.20:443
+/sbin/iptables -A FORWARD -p tcp -d 192.168.192.20 --dport 80 -j ACCEPT
+/sbin/iptables -A FORWARD -p tcp -d 192.168.192.20 --dport 443 -j ACCEPT
+```
+
+Make it executable:
+
+```bash
+sudo chmod +x /etc/network/if-pre-up.d/iptables-nat-forward
+```
+
+Apply the rules immediately:
+
+```bash
+/etc/network/if-pre-up.d/iptables-nat-forward
+```
+
+!!! note "Nginx Proxy IP"
+    The nginx-proxy VM should have IP 192.168.192.20. If you use a different IP, update the rules accordingly.
+
+---
+
 ## VM Network Configuration
 
 ### For VMs with Public IPs (attach to vmbr0)
