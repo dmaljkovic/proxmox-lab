@@ -1,58 +1,47 @@
 # Nginx Reverse Proxy and SSL
 
-Brief description: Install Nginx 1.24, configure reverse proxy for all services, and obtain SSL certificates.
+Brief description: Install Nginx, configure reverse proxy for all services, and obtain SSL certificates.
 
 ## What You'll Learn
 
 - How to install Nginx and Certbot
+- How to configure port forwarding on Proxmox host
 - How to configure reverse proxy for backend services
 - How to obtain and configure SSL certificates
 
 ## Prerequisites
 
-- [ ] VM-103 created and Ubuntu 24.04 LTS installed
-- [ ] IP address assigned and documented
-- [ ] Backend services installed (Rocket.Chat, Nextcloud)
-- [ ] Domain names planned (chat.example.com, cloud.example.com, etc.)
-- [ ] Ports 80 and 443 available on public IP
+- [ ] VM-103 (nginx-proxy) created with IP 192.168.192.20
+- [ ] All backend VMs installed (Rocket.Chat, Nextcloud, etc.)
+- [ ] Domain names pointing to your server IP
+- [ ] Ports 80 and 443 forwarded to nginx-proxy VM
 
 ## Estimated Time
 
-4-6 hours
+1-2 hours
 
 ## Step-by-Step Instructions
 
-### Step 1: SSH to Nginx Proxy VM
+### Step 1: Install Nginx and Certbot
+
+SSH to nginx-proxy VM:
 
 ```bash
-ssh admin@<nginx-ip>
+ssh admin@192.168.192.20
 ```
 
-### Step 2: Update System
+Update and install:
 
 ```bash
 sudo apt update && sudo apt upgrade -y
+sudo apt install nginx certbot python3-certbot-nginx -y
+sudo systemctl enable --now nginx
 ```
 
-### Step 3: Install Nginx
-
-```bash
-sudo apt install -y nginx
-```
-
-Verify installation:
+Verify:
 
 ```bash
 nginx -v
-```
-
-Expected: nginx version: nginx/1.24.x
-
-Start Nginx:
-
-```bash
-sudo systemctl enable nginx
-sudo systemctl start nginx
 ```
 
 Test:
@@ -63,316 +52,287 @@ curl http://localhost
 
 Should show "Welcome to nginx!"
 
-### Step 4: Install Certbot
+### Step 2: Port Forwarding on Proxmox Host
+
+On the Proxmox host (SSH in), set up port forwarding so internet traffic reaches the nginx-proxy VM:
 
 ```bash
-sudo apt install -y certbot python3-certbot-nginx
+# Forward public 80 → Nginx VM port 80
+iptables -t nat -A PREROUTING -i vmbr0 -p tcp --dport 80  -j DNAT --to-destination 192.168.192.20:80
+iptables -t nat -A PREROUTING -i vmbr0 -p tcp --dport 443 -j DNAT --to-destination 192.168.192.20:443
+
+# Allow the forwarded traffic
+iptables -A FORWARD -p tcp -d 192.168.192.20 --dport 80  -j ACCEPT
+iptables -A FORWARD -p tcp -d 192.168.192.20 --dport 443 -j ACCEPT
 ```
 
-Verify:
+Make persistent (create script):
 
 ```bash
-certbot --version
+sudo nano /etc/network/if-pre-up.d/iptables-nat-forward
 ```
 
-### Step 5: Configure Firewall
+Add the 4 iptables lines above, save, then:
 
 ```bash
-sudo ufw allow 'Nginx Full'
-sudo ufw allow OpenSSH
-sudo ufw enable
+sudo chmod +x /etc/network/if-pre-up.d/iptables-nat-forward
 ```
 
-Check status:
+Test from remote computer:
 
 ```bash
-sudo ufw status
+curl http://<your-public-ip>
 ```
 
-### Step 6: Create Upstream Definitions
+Should show the default Nginx welcome page.
+
+### Step 3: DNS Setup
+
+You need real domains/subdomains pointed to your server IP. Examples:
+
+| Domain | A Record |
+|--------|----------|
+| nextcloud.yourdomain.com | YOUR_PUBLIC_IP |
+| chat.yourdomain.com | YOUR_PUBLIC_IP |
+| auth.yourdomain.com | YOUR_PUBLIC_IP |
+| docs.yourdomain.com | YOUR_PUBLIC_IP |
+
+!!! warning "DNS Required for Let's Encrypt"
+    Without domains pointing to your server, Let's Encrypt won't work (HTTP-01 challenge needs public port 80 open and domain resolving correctly).
+
+Use `dig` or online DNS checker to verify DNS propagation.
+
+### Step 4: Obtain Let's Encrypt Certificates
+
+Run Certbot to get certificates:
 
 ```bash
-sudo nano /etc/nginx/conf.d/upstreams.conf
+sudo certbot --nginx -d nextcloud.yourdomain.com -d chat.yourdomain.com
 ```
 
-Add:
+Follow prompts:
+- Enter email (for renewal reminders)
+- Agree to terms of service
+- Choose redirect (recommended: yes → auto-redirect HTTP to HTTPS)
+
+Certbot will create/update `/etc/nginx/sites-available/` with SSL configuration.
+
+### Step 5: Configure Nginx Server Blocks
+
+Certbot creates basic configs, but you may need to refine them for proper proxying.
+
+#### Nextcloud Configuration
+
+Edit or create:
+
+```bash
+sudo nano /etc/nginx/sites-available/nextcloud.yourdomain.com
+```
 
 ```nginx
-# Upstream definitions for backend services
-
-upstream rocketchat_backend {
-    server <rocketchat-ip>:3000;
-}
-
-upstream nextcloud_backend {
-    server <nextcloud-ip>:80;
-}
-
-upstream keycloak_backend {
-    server <keycloak-ip>:8080;
-}
-
-upstream mkdocs_backend {
-    server <mkdocs-ip>:8000;
-}
-```
-
-Save (Ctrl+O, Enter, Ctrl+X)
-
-### Step 7: Create HTTP to HTTPS Redirect
-
-```bash
-sudo nano /etc/nginx/sites-available/redirect
-```
-
-Add:
-
-```nginx
-# HTTP to HTTPS redirect for all domains
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name _;
-    
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-    
-    location / {
-        return 301 https://$host$request_uri;
-    }
+    listen 80;
+    server_name nextcloud.yourdomain.com;
+    return 301 https://$host$request_uri;
 }
-```
 
-### Step 8: Create Rocket.Chat Configuration
-
-```bash
-sudo nano /etc/nginx/sites-available/rocketchat
-```
-
-Add:
-
-```nginx
 server {
     listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name chat.example.com;
+    server_name nextcloud.yourdomain.com;
 
-    ssl_certificate /etc/letsencrypt/live/chat.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/chat.example.com/privkey.pem;
-    
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers on;
-    
-    # WebSocket support for Rocket.Chat
-    location / {
-        proxy_pass http://rocketchat_backend;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Nginx-Proxy true;
-        proxy_redirect off;
-        
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
-}
-```
+    ssl_certificate /etc/letsencrypt/live/nextcloud.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/nextcloud.yourdomain.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-### Step 9: Create Nextcloud Configuration
-
-```bash
-sudo nano /etc/nginx/sites-available/nextcloud
-```
-
-Add:
-
-```nginx
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name cloud.example.com;
-
-    ssl_certificate /etc/letsencrypt/live/cloud.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/cloud.example.com/privkey.pem;
-    
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers on;
-    
     client_max_body_size 10G;
     client_body_timeout 300s;
-    fastcgi_buffers 64 4K;
-    
+
+    # Proxy to Nextcloud VM (snap uses port 80 internally)
     location / {
-        proxy_pass http://nextcloud_backend;
+        proxy_pass http://192.168.192.102:80;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $server_name;
-        
-        proxy_buffering off;
-        proxy_request_buffering off;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_read_timeout 3600s;
+        proxy_redirect off;
+    }
+
+    # Handle .well-known for CalDAV/CardDAV
+    location /.well-known/carddav { return 301 $scheme://$host/remote.php/dav; }
+    location /.well-known/caldav  { return 301 $scheme://$host/remote.php/dav; }
+    location ^~ /.well-known       { return 301 $scheme://$host/index.php$uri; }
+}
+```
+
+#### Rocket.Chat Configuration
+
+```bash
+sudo nano /etc/nginx/sites-available/chat.yourdomain.com
+```
+
+```nginx
+server {
+    listen 80;
+    server_name chat.yourdomain.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name chat.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/chat.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/chat.yourdomain.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Rocket.Chat runs on port 3000 by default
+    location / {
+        proxy_pass http://192.168.192.101:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
+        proxy_redirect off;
     }
 }
 ```
 
-### Step 10: Enable Sites
-
-Remove default site:
+#### Keycloak Configuration (if using)
 
 ```bash
-sudo rm /etc/nginx/sites-enabled/default
+sudo nano /etc/nginx/sites-available/auth.yourdomain.com
 ```
 
-Enable redirect:
+```nginx
+server {
+    listen 80;
+    server_name auth.yourdomain.com;
+    return 301 https://$host$request_uri;
+}
 
-```bash
-sudo ln -s /etc/nginx/sites-available/redirect /etc/nginx/sites-enabled/
+server {
+    listen 443 ssl http2;
+    server_name auth.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/auth.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/auth.yourdomain.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        proxy_pass http://192.168.192.106:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
-Test configuration:
+#### MkDocs Configuration (if using)
 
 ```bash
-sudo nginx -t
+sudo nano /etc/nginx/sites-available/docs.yourdomain.com
 ```
 
-Should show "syntax is ok" and "test is successful"
+```nginx
+server {
+    listen 80;
+    server_name docs.yourdomain.com;
+    return 301 https://$host$request_uri;
+}
 
-### Step 11: Obtain SSL Certificates
+server {
+    listen 443 ssl http2;
+    server_name docs.yourdomain.com;
 
-Create webroot for Certbot:
+    ssl_certificate /etc/letsencrypt/live/docs.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/docs.yourdomain.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-```bash
-sudo mkdir -p /var/www/certbot
+    location / {
+        proxy_pass http://192.168.192.104:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
-Obtain certificates:
+### Step 6: Enable Configs and Test
 
 ```bash
-sudo certbot certonly --webroot -w /var/www/certbot \
-  -d chat.example.com \
-  -d cloud.example.com \
-  -d auth.example.com \
-  -d docs.example.com
-```
+sudo ln -s /etc/nginx/sites-available/nextcloud.yourdomain.com /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/chat.yourdomain.com /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/auth.yourdomain.com /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/docs.yourdomain.com /etc/nginx/sites-enabled/
 
-Follow prompts:
-- Enter email address
-- Accept terms of service
-- Choose whether to share email with EFF
-
-### Step 12: Enable Service Sites
-
-Now that certificates exist, enable service configurations:
-
-```bash
-sudo ln -s /etc/nginx/sites-available/rocketchat /etc/nginx/sites-enabled/
-sudo ln -s /etc/nginx/sites-available/nextcloud /etc/nginx/sites-enabled/
-```
-
-Test and reload:
-
-```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-### Step 13: Setup Auto-Renewal
+### Step 7: Configure Backend Firewall (if UFW enabled)
 
-Test renewal:
-
-```bash
-sudo certbot renew --dry-run
-```
-
-Enable timer:
+On each backend VM, allow traffic from nginx-proxy:
 
 ```bash
-sudo systemctl enable certbot.timer
-sudo systemctl start certbot.timer
+# On Rocket.Chat VM
+sudo ufw allow from 192.168.192.20 to any port 3000
+
+# On Nextcloud VM  
+sudo ufw allow from 192.168.192.20 to any port 80
+
+# On Keycloak VM
+sudo ufw allow from 192.168.192.20 to any port 8080
+
+# On MkDocs VM
+sudo ufw allow from 192.168.192.20 to any port 8000
 ```
-
-Verify timer:
-
-```bash
-sudo systemctl status certbot.timer
-```
-
-### Step 14: Test Access
-
-Test Rocket.Chat:
-
-```bash
-curl -I https://chat.example.com
-```
-
-Test Nextcloud:
-
-```bash
-curl -I https://cloud.example.com
-```
-
-Both should return HTTP 200 or 302.
 
 ## Verification
 
 - [ ] Nginx installed and running
-- [ ] Certbot installed
-- [ ] Firewall configured (UFW)
-- [ ] Upstream definitions created
-- [ ] HTTP to HTTPS redirect configured
+- [ ] Port forwarding working (curl public IP shows nginx page)
+- [ ] DNS pointing to server IP
 - [ ] SSL certificates obtained for all domains
-- [ ] Rocket.Chat reverse proxy configured
-- [ ] Nextcloud reverse proxy configured
-- [ ] Configuration syntax valid
-- [ ] Sites enabled and Nginx reloaded
-- [ ] Auto-renewal configured
+- [ ] All server blocks enabled
 - [ ] HTTPS access working for all services
 
 ## Common Issues
 
-### Issue: certbot: command not found
-**Solution**: 
-```bash
-sudo apt install -y certbot python3-certbot-nginx
-```
-
-### Issue: nginx: [emerg] bind() to 0.0.0.0:80 failed
-**Solution**: Something else is using port 80:
-```bash
-sudo lsof -i :80
-sudo systemctl stop apache2  # if Apache is running
-sudo systemctl disable apache2
-```
+### Issue: curl shows empty response
+**Solution**: Check if nginx is running: `sudo systemctl status nginx`
 
 ### Issue: Certificate validation failed
-**Solution**: Ensure DNS points to your server IP:
+**Solution**: Verify DNS is pointing correctly:
 ```bash
-nslookup chat.example.com
-# Should return your server IP
+nslookup chat.yourdomain.com
 ```
+
+### Issue: 502 Bad Gateway
+**Solution**: 
+- Check backend service is running
+- Check firewall allows traffic from nginx-proxy
+- Verify backend IP is correct
 
 ### Issue: WebSocket errors in Rocket.Chat
-**Solution**: Ensure WebSocket headers are configured:
-```bash
-sudo nano /etc/nginx/sites-available/rocketchat
-# Verify these lines exist:
-# proxy_set_header Upgrade $http_upgrade;
-# proxy_set_header Connection "upgrade";
+**Solution**: Ensure these headers are in config:
+```nginx
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection "upgrade";
 ```
-
-### Issue: Large file uploads fail in Nextcloud
-**Solution**: Already configured with `client_max_body_size 10G`. If still failing, check Nextcloud settings.
 
 ## Next Steps
 
-- [OpenLDAP Server](../04-security/01-firewall.md) (after all services configured)
+- [Firewall Configuration](../04-security/01-firewall.md)
 - [Keycloak & OIDC](04-keycloak-oidc.md)
