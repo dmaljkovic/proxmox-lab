@@ -1,11 +1,12 @@
 # Network Configuration
 
-Brief description: Configure bridged network setup for Proxmox VE on Hetzner.
+Brief description: Configure bridged network setup for Proxmox VE on Hetzner with public and private networks.
 
 ## What You'll Learn
 
 - How Hetzner's IP/MAC binding works
-- How to configure bridged network setup
+- How to configure bridged network setup with public IP
+- How to set up private internal network with NAT
 
 ## Prerequisites
 
@@ -29,62 +30,81 @@ Hetzner has strict IP/MAC binding for security. Key points:
 
 ---
 
-## Bridged Setup
+## Network Configuration
 
-In bridged mode, the host acts as a transparent bridge. VMs get their own MAC address and appear directly on the network.
-
-### Host Configuration
+Edit `/etc/network/interfaces` on the Proxmox host:
 
 ```bash
-# /etc/network/interfaces
+nano /etc/network/interfaces
+```
 
+Add the following configuration:
+
+```bash
+# Loopback
 auto lo
 iface lo inet loopback
+iface lo inet6 loopback
 
-auto enp0s31f6
-iface enp0s31f6 inet manual
+# Physical Interface (replace enp5s0 with your actual interface)
+iface enp5s0 inet manual
 
+# Include other network configurations
+source /etc/network/interfaces.d/*
+
+# Proxmox Bridge - Public Network
 auto vmbr0
 iface vmbr0 inet static
-        address 198.51.100.10/32
-        gateway 198.51.100.1
-        bridge-ports enp0s31f6
-        bridge-stp off
-        bridge-fd 0
+      address      YOUR_IP/26
+      gateway      YOUR_GATEWAY
+      bridge-ports YOUR_INTERFACE
+      bridge-stp   off
+      bridge-fd    0
+      up           sysctl -p
+
+# Proxmox Bridge - Private Internal Network (NAT)
+auto vmbr2
+iface vmbr2 inet static
+      address      192.168.192.5/18
+      bridge-ports none
+      bridge-stp   off
+      bridge-fd    0
+      post-up      iptables -t nat -A POSTROUTING -s '192.168.192.0/18' -o vmbr0 -j MASQUERADE
+      post-down    iptables -t nat -D POSTROUTING -s '192.168.192.0/18' -o vmbr0 -j MASQUERADE
+      post-up      iptables -t raw -I PREROUTING -i fwbr+ -j CT --zone 1
+      post-down    iptables -t raw -D PREROUTING -i fwbr+ -j CT --zone 1
 ```
 
-### Guest VM Configuration
+### Configuration Values
 
-#### Static configuration:
+Replace the following placeholders with your actual values:
 
-```bash
-# /etc/network/interfaces
+| Placeholder | Description | Example |
+|-------------|-------------|---------|
+| `YOUR_IP/26` | Your server's public IP with subnet mask | `192.168.1.100/26` |
+| `YOUR_GATEWAY` | Your server's gateway IP | `192.168.1.1` |
+| `YOUR_INTERFACE` | Your physical network interface | `enp5s0` |
 
-auto ens18
-iface ens18 inet static
-        address 192.0.2.20/32
-        gateway 192.0.2.1
-```
+!!! warning "Verify Interface Name"
+    Use `ip addr` or `predict-check` to identify your actual network interface name before configuring.
 
-#### DHCP configuration:
+---
 
-```bash
-# /etc/network/interfaces
+## Network Explanation
 
-auto lo
-iface lo inet loopback
+### vmbr0 - Public Bridge
 
-auto ens18
-iface ens18 inet dhcp
-        hwaddress ether aa:bb:cc:dd:ee:ff
-```
+- Connects to the physical network interface
+- Handles all public traffic
+- VMs attached to this bridge get direct network access
+- Uses the main IP and MAC from Hetzner
 
-Use the virtual MAC address generated in the Robot Panel.
+### vmbr2 - Private Internal Network
 
-For LXC containers, configure via Proxmox GUI:
-1. Select container → Network
-2. Click on the bridge
-3. Select DHCP and add the MAC address from Robot Panel
+- Internal-only bridge with no physical port
+- Provides NAT (Network Address Translation) to vmbr0
+- IP range: `192.168.192.0/18` (192.168.192.1 - 192.168.255.254)
+- Use this for internal-only VMs that don't need public IPs
 
 ---
 
@@ -99,11 +119,37 @@ systemctl restart networking
 !!! warning "Running VMs"
     If VMs are running when restarting networking, you must stop and start them again (not restart) to recreate their network connections.
 
+---
+
+## VM Network Configuration
+
+### For VMs with Public IPs (attach to vmbr0)
+
+Configure via Proxmox GUI:
+1. Create/edit VM → Hardware → Network Device
+2. Select **Bridge: vmbr0**
+3. Add MAC address from Hetzner Robot (for additional IPs)
+
+### For VMs with Internal IPs only (attach to vmbr2)
+
+```bash
+# Inside the VM, configure static IP
+auto ens18
+iface ens18 inet static
+        address 192.168.192.100/18
+        gateway 192.168.192.5
+```
+
+---
+
 ## Verification
 
 - [ ] Network configuration matches your setup
 - [ ] Proxmox host is reachable via main IP
+- [ ] vmbr0 bridge is active
+- [ ] vmbr2 bridge is active with NAT
 - [ ] VMs can communicate as expected
+- [ ] Internal VMs can reach the internet via NAT
 
 ## Next Steps
 

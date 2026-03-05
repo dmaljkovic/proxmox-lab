@@ -1,6 +1,6 @@
 # Proxmox Installation (QEMU Method)
 
-Brief description: Install Proxmox VE 9.x on your Hetzner server using the QEMU-based ISO installation method from rescue mode.
+Brief description: Install Proxmox VE on your Hetzner server using the QEMU-based ISO installation method from rescue mode.
 
 ## What You'll Learn
 
@@ -66,33 +66,37 @@ Expected size: ~1.1GB
 
 Start a virtual machine with the Proxmox ISO and pass your NVMe drives through:
 
-For **UEFI** servers:
+#### UEFI Mode (with OVMF BIOS)
 
 ```bash
 qemu-system-x86_64 \
   -enable-kvm \
+  -bios /usr/share/ovmf/OVMF.fd \
+  -k en-us \
   -cpu host \
-  -m 16G \
+  -smp 4 \
+  -m 4096 \
   -boot d \
-  -cdrom ./proxmox-ve_9.0-1.iso \
-  -drive file=/dev/nvme0n1,format=raw,if=virtio \
-  -drive file=/dev/nvme1n1,format=raw,if=virtio \
-  -bios /usr/share/OVMF/OVMF_CODE.fd \
-  -vnc 127.0.0.1:0
+  -cdrom ./pve.iso \
+  -drive file=/dev/nvme0n1,format=raw,media=disk,if=virtio \
+  -drive file=/dev/nvme1n1,format=raw,media=disk,if=virtio \
+  -vnc :0
 ```
 
-For **legacy BIOS** servers (remove the `-bios` line):
+#### Legacy BIOS Mode (without OVMF)
 
 ```bash
 qemu-system-x86_64 \
   -enable-kvm \
+  -k en-us \
   -cpu host \
-  -m 16G \
+  -smp 4 \
+  -m 4096 \
   -boot d \
-  -cdrom ./proxmox-ve_9.0-1.iso \
-  -drive file=/dev/nvme0n1,format=raw,if=virtio \
-  -drive file=/dev/nvme1n1,format=raw,if=virtio \
-  -vnc 127.0.0.1:0
+  -cdrom ./pve.iso \
+  -drive file=/dev/nvme0n1,format=raw,media=disk,if=virtio \
+  -drive file=/dev/nvme1n1,format=raw,media=disk,if=virtio \
+  -vnc :0
 ```
 
 !!! note "Drive Naming"
@@ -167,32 +171,40 @@ Note the MAC address and IP configuration.
 
 Start Proxmox without the ISO to boot from the installed system:
 
-For **UEFI** servers:
+#### UEFI Mode (with OVMF BIOS)
+
+```bash
+qemu-system-x86_64 \
+  -enable-kvm \
+  -bios /usr/share/ovmf/OVMF.fd \
+  -cpu host \
+  -k en-us \
+  -device virtio-net,netdev=net0 \
+  -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22 \
+  -smp 4 \
+  -m 4096 \
+  -drive file=/dev/nvme0n1,format=raw,media=disk,if=virtio \
+  -drive file=/dev/nvme1n1,format=raw,media=disk,if=virtio \
+  -vnc :0
+```
+
+#### Legacy BIOS Mode (without OVMF)
 
 ```bash
 qemu-system-x86_64 \
   -enable-kvm \
   -cpu host \
-  -m 16G \
-  -boot d \
-  -drive file=/dev/nvme0n1,format=raw,if=virtio \
-  -drive file=/dev/nvme1n1,format=raw,if=virtio \
-  -bios /usr/share/OVMF/OVMF_CODE.fd \
-  -vnc 127.0.0.1:0
+  -k en-us \
+  -device virtio-net,netdev=net0 \
+  -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22 \
+  -smp 4 \
+  -m 4096 \
+  -drive file=/dev/nvme0n1,format=raw,media=disk,if=virtio \
+  -drive file=/dev/nvme1n1,format=raw,media=disk,if=virtio \
+  -vnc :0
 ```
 
-For **legacy BIOS** servers:
-
-```bash
-qemu-system-x86_64 \
-  -enable-kvm \
-  -cpu host \
-  -m 16G \
-  -boot d \
-  -drive file=/dev/nvme0n1,format=raw,if=virtio \
-  -drive file=/dev/nvme1n1,format=raw,if=virtio \
-  -vnc 127.0.0.1:0
-```
+This command includes network forwarding, allowing SSH access to the VM via `ssh -p 2222 root@127.0.0.1`.
 
 ### Step 10: Configure Network
 
@@ -202,19 +214,7 @@ Connect via VNC again. Log in to the Proxmox console and edit the network config
 nano /etc/network/interfaces
 ```
 
-Adjust the interface name to match what you found in Step 8. For example:
-
-```bash
-auto lo
-iface lo inet loopback
-
-auto enp0s31f6
-iface enp0s31f6 inet static
-        address <your-server-ip>/32
-        gateway <your-gateway-ip>
-```
-
-Save and exit (Ctrl+O, Enter, Ctrl+X).
+Adjust the interface name to match what you found in Step 8. See [Network Configuration](03-network-configuration.md) for the complete network setup.
 
 ### Step 11: Reboot into Production
 
@@ -253,4 +253,4 @@ Login credentials:
 
 ## Next Steps
 
-Proceed to [Network Configuration](02-network-configuration.md) to configure your network setup.
+Proceed to [Network Configuration](03-network-configuration.md) to configure your network setup.
