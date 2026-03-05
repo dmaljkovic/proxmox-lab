@@ -27,9 +27,8 @@ zfs rollback rpool/vm-101-disk-0@snapshot-name
 ### Rocket.Chat
 
 ```bash
-cd ~/rocketchat
-docker compose down
-docker compose up -d
+ssh admin@192.168.192.101
+sudo snap restart rocketchat
 ```
 
 ### Nextcloud

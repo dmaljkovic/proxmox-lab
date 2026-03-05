@@ -1,139 +1,220 @@
 # Rocket.Chat Installation
 
-Brief description: Install Rocket.Chat 6.x on VM-101 using Docker Compose.
+Brief description: Install and configure Rocket.Chat on VM-101 using Snap.
 
 ## What You'll Learn
 
-- How to install Docker and Docker Compose
-- How to configure Rocket.Chat with MongoDB
+- How to verify Rocket.Chat snap is installed
+- How to configure Rocket.Chat
+- How to set up Nginx reverse proxy
 - How to verify the installation
 
 ## Prerequisites
 
 - [ ] VM-101 created and Ubuntu 24.04 LTS installed
-- [ ] IP address assigned and documented
+- [ ] Rocket.Chat snap selected during Ubuntu installation (or install manually below)
+- [ ] IP address assigned and documented (192.168.192.101)
 - [ ] SSH access to VM-101 working
 - [ ] 4GB RAM and 30GB disk available
+- [ ] Nginx Proxy VM (VM-103) installed and accessible
 
 ## Estimated Time
 
-3-4 hours
+30-45 minutes
+
+!!! note "Snap Already Installed"
+    If you selected Rocket.Chat during Ubuntu installation, the snap is already installed. Skip Step 2 if already done.
 
 ## Step-by-Step Instructions
 
 ### Step 1: SSH to Rocket.Chat VM
 
 ```bash
-ssh admin@<rocketchat-ip>
+ssh admin@192.168.192.101
 ```
 
-### Step 2: Update System
+### Step 2: Verify Rocket.Chat Snap
+
+Check if Rocket.Chat snap is installed:
 
 ```bash
-sudo apt update && sudo apt upgrade -y
+snap list rocketchat
 ```
 
-### Step 3: Install Docker
-
-Install prerequisites:
+If not installed, install it:
 
 ```bash
-sudo apt install -y apt-transport-https ca-certificates curl gnupg lsb-release
+sudo snap install rocketchat
 ```
 
-Add Docker GPG key:
+### Step 3: Configure Rocket.Chat
+
+Enable HTTPS (required for Rocket.Chat):
 
 ```bash
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+sudo snap set rocketchat port=3000
+sudo snap set rocketchat https=enabled
+sudo snap set rocketchat ssl-certs=enabled
 ```
 
-Add Docker repository:
+Start Rocket.Chat:
 
 ```bash
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo snap start rocketchat
 ```
 
-Install Docker:
+Check status:
 
 ```bash
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo snap services rocketchat
 ```
 
-Verify installation:
+### Step 4: Wait for Initial Setup
+
+Rocket.Chat takes a few minutes to initialize on first boot. Wait 2-3 minutes then check:
 
 ```bash
-docker --version
-docker compose version
+sudo snap logs rocketchat -n 50
 ```
 
-### Step 4: Add User to Docker Group
+Look for messages indicating the server is ready.
 
-```bash
-sudo usermod -aG docker $USER
-newgrp docker
+### Step 5: Access Rocket.Chat
+
+Open your browser and navigate to:
+
+```
+http://192.168.192.101:3000
 ```
 
-### Step 5: Create Docker Compose Configuration
+Or if HTTPS is configured:
 
-Create directory:
-
-```bash
-mkdir -p ~/rocketchat
-cd ~/rocketchat
+```
+https://192.168.192.101
 ```
 
-Create docker-compose.yml:
+### Step 6: Initial Admin Setup
+
+1. Follow the on-screen wizard to create the first admin user
+2. Configure your organization details
+3. Complete the setup
+
+### Step 7: Configure Nginx Reverse Proxy
+
+On the Nginx Proxy VM (192.168.192.20), create a configuration file:
 
 ```bash
-cat > docker-compose.yml << 'EOF'
-version: '3'
+ssh admin@192.168.192.20
+sudo nano /etc/nginx/sites-available/rocketchat
+```
 
-services:
-  rocketchat:
-    image: rocketchat/rocket.chat:latest
-    restart: unless-stopped
-    volumes:
-      - ./uploads:/app/uploads
-    environment:
-      - PORT=3000
-      - ROOT_URL=http://localhost:3000
-      - MONGO_URL=mongodb://mongo:27017/rocketchat
-      - MONGO_OPLOG_URL=mongodb://mongo:27017/local
-    ports:
-      - 3000:3000
-    depends_on:
-      - mongo
-    networks:
-      - rocketchat-network
+Add the following configuration:
 
-  mongo:
-    image: mongo:6.0
-    restart: unless-stopped
-    volumes:
-      - ./data/db:/data/db
-      - ./data/dump:/dump
-    command: mongod --oplogSize 128 --replSet rs0
-    networks:
-      - rocketchat-network
+```nginx
+upstream rocketchat {
+    server 192.168.192.101:3000;
+}
 
-  mongo-init-replica:
-    image: mongo:6.0
-    command: >
-      bash -c
-      "for i in \`seq 1 30\`; do
-        mongo mongo/rocketchat --eval \"rs.initiate({
-          _id: 'rs0',
-          members: [ { _id: 0, host: 'mongo:27017' } ]})\" &&
-        s=\$\$? && break || s=\$\$?;
-        echo \"Tried \$\$i times. Waiting 5 secs...\";
-        sleep 5;
-      done; (exit \$\$s)"
-    depends_on:
-      - mongo
-    networks:
-      - rocketchat-network
+server {
+    listen 80;
+    server_name chat.example.com;
 
-networks:
-  rocketchat-network:
-    driver: bridge
+    location / {
+        proxy_pass http://rocketchat;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forward-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forward-Proto http;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+    }
+}
+```
+
+Enable the site:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/rocketchat /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### Step 8: Update Firewall (if enabled)
+
+On the Rocket.Chat VM, allow traffic from nginx-proxy:
+
+```bash
+sudo ufw allow from 192.168.192.20 to any port 3000
+sudo ufw reload
+```
+
+### Step 9: Verify Access via Domain
+
+After DNS propagation, access Rocket.Chat via your domain:
+
+```
+https://chat.example.com
+```
+
+## Configuration Commands
+
+### Common Snap Commands
+
+```bash
+# Stop Rocket.Chat
+sudo snap stop rocketchat
+
+# Start Rocket.Chat
+sudo snap start rocketchat
+
+# Restart Rocket.Chat
+sudo snap restart rocketchat
+
+# View logs
+sudo snap logs rocketchat -f
+
+# Check status
+snap services rocketchat
+```
+
+### Environment Variables
+
+To set custom environment variables:
+
+```bash
+sudo snap set rocketchat root-url=https://chat.example.com
+sudo snap restart rocketchat
+```
+
+## Verification
+
+- [ ] Rocket.Chat snap is installed
+- [ ] Service is running
+- [ ] Accessible at http://192.168.192.101:3000
+- [ ] Nginx proxy configured
+- [ ] Accessible via domain (chat.example.com)
+- [ ] Admin account created
+
+## Common Issues
+
+### Issue: Rocket.Chat not starting
+**Solution**: Check logs:
+```bash
+sudo snap logs rocketchat -n 100
+```
+
+### Issue: Cannot connect via domain
+**Solution**: 
+- Verify DNS points to your server IP
+- Check nginx configuration: `sudo nginx -t`
+- Check firewall on nginx-proxy: `sudo ufw status`
+
+### Issue: WebSocket connection errors
+**Solution**: Ensure nginx proxy headers include WebSocket support (shown in config above)
+
+## Next Steps
+
+Proceed to [Nextcloud Installation](02-nextcloud.md) if not already installed.

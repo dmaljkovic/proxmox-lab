@@ -11,13 +11,17 @@ Brief description: Install Nextcloud 28.x on VM-102 using Snap for quick deploym
 ## Prerequisites
 
 - [ ] VM-102 created and Ubuntu 24.04 LTS installed
-- [ ] IP address assigned and documented
+- [ ] Nextcloud snap selected during Ubuntu installation (or install manually below)
+- [ ] IP address assigned and documented (192.168.192.102)
 - [ ] SSH access to VM-102 working
 - [ ] 6GB RAM and 50GB disk available
 
 ## Estimated Time
 
-3-4 hours
+30-45 minutes
+
+!!! note "Snap Already Installed"
+    If you selected Nextcloud during Ubuntu installation, the snap is already installed. Skip Steps 2-4 if already done.
 
 ## Step-by-Step Instructions
 

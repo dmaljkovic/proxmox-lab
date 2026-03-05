@@ -25,25 +25,25 @@ fi
 Script to update all VMs:
 
 ```bash
-for ip in <rocketchat-ip> <nextcloud-ip> <nginx-ip> <mkdocs-ip> <ldap-ip> <keycloak-ip>; do
+for ip in 192.168.192.101 192.168.192.102 192.168.192.20 192.168.192.104 192.168.192.105 192.168.192.106; do
     echo "Updating $ip..."
     ssh admin@$ip "sudo apt update && sudo apt upgrade -y"
 done
 ```
 
-## Docker Updates (Rocket.Chat)
+## Snap Updates (Rocket.Chat & Nextcloud)
+
+### Rocket.Chat
 
 ```bash
-ssh admin@<rocketchat-ip>
-cd ~/rocketchat
-docker compose pull
-docker compose up -d
+ssh admin@192.168.192.101
+sudo snap refresh rocketchat
 ```
 
-## Snap Updates (Nextcloud)
+### Nextcloud
 
 ```bash
-ssh admin@<nextcloud-ip>
+ssh admin@192.168.192.102
 sudo snap refresh nextcloud
 ```
 
