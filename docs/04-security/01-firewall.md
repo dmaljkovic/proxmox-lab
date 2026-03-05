@@ -31,7 +31,7 @@ Brief description: Configure UFW firewall on all VMs with appropriate rules for 
 SSH to VM:
 
 ```bash
-ssh admin@<rocketchat-ip>
+ssh admin@192.168.192.101
 ```
 
 Configure UFW:
@@ -48,7 +48,7 @@ sudo ufw default allow outgoing
 sudo ufw allow from <your-admin-ip> to any port 22
 
 # Allow Rocket.Chat from Nginx Proxy only
-sudo ufw allow from <nginx-ip> to any port 3000
+sudo ufw allow from 192.168.192.20 to any port 3000
 
 # Enable firewall
 sudo ufw enable
@@ -60,13 +60,13 @@ sudo ufw status verbose
 ## Nextcloud VM (VM-102)
 
 ```bash
-ssh admin@<nextcloud-ip>
+ssh admin@192.168.192.102
 
 sudo apt install -y ufw
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow from <your-admin-ip> to any port 22
-sudo ufw allow from <nginx-ip> to any port 80
+sudo ufw allow from 192.168.192.20 to any port 80
 sudo ufw enable
 sudo ufw status verbose
 ```
@@ -74,7 +74,7 @@ sudo ufw status verbose
 ## Nginx Proxy VM (VM-103)
 
 ```bash
-ssh admin@<nginx-ip>
+ssh admin@192.168.192.20
 
 sudo apt install -y ufw
 sudo ufw default deny incoming
@@ -92,13 +92,13 @@ sudo ufw status verbose
 ## MkDocs VM (VM-104)
 
 ```bash
-ssh admin@<mkdocs-ip>
+ssh admin@192.168.192.104
 
 sudo apt install -y ufw
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow from <your-admin-ip> to any port 22
-sudo ufw allow from <nginx-ip> to any port 8000
+sudo ufw allow from 192.168.192.20 to any port 8000
 sudo ufw enable
 sudo ufw status verbose
 ```
@@ -106,7 +106,7 @@ sudo ufw status verbose
 ## OpenLDAP VM (VM-105)
 
 ```bash
-ssh admin@<ldap-ip>
+ssh admin@192.168.192.105
 
 sudo apt install -y ufw
 sudo ufw default deny incoming
@@ -114,8 +114,8 @@ sudo ufw default allow outgoing
 sudo ufw allow from <your-admin-ip> to any port 22
 
 # LDAP ports - only from Keycloak
-sudo ufw allow from <keycloak-ip> to any port 389
-sudo ufw allow from <keycloak-ip> to any port 636
+sudo ufw allow from 192.168.192.106 to any port 389
+sudo ufw allow from 192.168.192.106 to any port 636
 
 sudo ufw enable
 sudo ufw status verbose
@@ -124,13 +124,13 @@ sudo ufw status verbose
 ## Keycloak VM (VM-106)
 
 ```bash
-ssh admin@<keycloak-ip>
+ssh admin@192.168.192.106
 
 sudo apt install -y ufw
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow from <your-admin-ip> to any port 22
-sudo ufw allow from <nginx-ip> to any port 8080
+sudo ufw allow from 192.168.192.20 to any port 8080
 sudo ufw enable
 sudo ufw status verbose
 ```
