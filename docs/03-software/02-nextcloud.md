@@ -1,20 +1,20 @@
 # Nextcloud Installation
 
-Brief description: Install Nextcloud 28.x on VM-102 using Snap for quick deployment.
+Brief description: Install Nextcloud on VM-102 using Snap and configure for reverse proxy.
 
 ## What You'll Learn
 
 - How to install Nextcloud via Snap
-- How to configure trusted domains
+- How to configure trusted domains and proxies
 - How to verify the installation
 
 ## Prerequisites
 
-- [ ] VM-102 created and Ubuntu 24.04 LTS installed
+- [ ] VM-102 created with Ubuntu 24.04 LTS
 - [ ] Nextcloud snap selected during Ubuntu installation (or install manually below)
-- [ ] IP address assigned and documented (192.168.192.102)
-- [ ] SSH access to VM-102 working
-- [ ] 6GB RAM and 50GB disk available
+- [ ] IP address: 192.168.192.102
+- [ ] Nginx Proxy VM (192.168.192.20) installed
+- [ ] Domain: cloud.yourdomain.com
 
 ## Estimated Time
 
@@ -28,7 +28,7 @@ Brief description: Install Nextcloud 28.x on VM-102 using Snap for quick deploym
 ### Step 1: SSH to Nextcloud VM
 
 ```bash
-ssh admin@<nextcloud-ip>
+ssh admin@192.168.192.102
 ```
 
 ### Step 2: Update System
@@ -37,13 +37,13 @@ ssh admin@<nextcloud-ip>
 sudo apt update && sudo apt upgrade -y
 ```
 
-### Step 3: Install Snap
+### Step 3: Install Snap (if needed)
 
 ```bash
 sudo apt install -y snapd
 ```
 
-Verify snap is installed:
+Verify:
 
 ```bash
 snap version
@@ -63,40 +63,44 @@ sudo snap changes
 
 Wait until status shows "Done".
 
-### Step 5: Configure Trusted Domains
-
-Add your internal IP:
-
-```bash
-sudo nextcloud.occ config:system:set trusted_domains 1 --value=<nextcloud-ip>
-```
-
-Add your public domain (for later):
-
-```bash
-sudo nextcloud.occ config:system:set trusted_domains 2 --value=cloud.example.com
-```
-
-Verify configuration:
-
-```bash
-sudo nextcloud.occ config:system:get trusted_domains
-```
-
-Should show:
-```
-localhost
-<nextcloud-ip>
-cloud.example.com
-```
-
-### Step 6: Create Admin Account
+### Step 5: Create Admin Account
 
 ```bash
 sudo nextcloud.manual-install admin <strong-password>
 ```
 
 Replace `<strong-password>` with a secure password.
+
+### Step 6: Configure for Reverse Proxy
+
+Configure trusted domains and trusted proxies:
+
+```bash
+# Add your domain
+sudo nextcloud.occ config:system:set trusted_domains 1 --value=cloud.yourdomain.com
+
+# Add nginx-proxy IP as trusted proxy
+sudo nextcloud.occ config:system:set trusted_proxies 0 --value=192.168.192.20
+
+# Set URL overwrite
+sudo nextcloud.occ config:system:set overwrite.cli.url --value=https://cloud.yourdomain.com/
+
+# Set protocol overwrite
+sudo nextcloud.occ config:system:set overwriteprotocol --value=https
+```
+
+Restart Nextcloud:
+
+```bash
+sudo snap restart nextcloud
+```
+
+Verify configuration:
+
+```bash
+sudo nextcloud.occ config:system:get trusted_domains
+sudo nextcloud.occ config:system:get trusted_proxies
+```
 
 ### Step 7: Verify Installation
 
@@ -142,57 +146,48 @@ sudo nextcloud.occ config:system:set memcache.local --value='\OC\Memcache\APCu'
 sudo snap set nextcloud php.memory-limit=512M
 ```
 
-### Step 11: Test Web Access
+### Step 11: Test Access
 
-1. Open browser: `http://<nextcloud-ip>`
+After configuring Nginx reverse proxy:
+
+1. Open browser: `https://cloud.yourdomain.com`
 
 2. Login with:
    - Username: admin
-   - Password: [password you set in Step 6]
+   - Password: [password you set in Step 5]
 
 3. You should see the Nextcloud dashboard
 
-### Step 12: Initial Configuration
+## Verification
 
-**Configure Email** (optional):
-- Settings → Administration → Basic settings
-- Email server settings
+- [ ] Nextcloud snap installed
+- [ ] Admin account created
+- [ ] Trusted domains configured
+- [ ] Trusted proxies configured (nginx-proxy IP)
+- [ ] SSL certificates obtained
+- [ ] Access via domain working
 
-**Enable Apps**:
-- Apps → Your apps
-- Enable useful apps:
-  - Calendar
-  - Contacts
-  - Tasks
-  - Notes
+## Common Issues
 
-**Configure Sharing**:
-- Settings → Administration → Sharing
-- Set appropriate sharing policies
-
-### Step 13: Create Backup Script
-
+### Issue: "Access through untrusted domain"
+**Solution**: Check trusted_domains configuration:
 ```bash
-cat > ~/backup-nextcloud.sh << 'EOF'
-#!/bin/bash
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="$HOME/backups"
-mkdir -p $BACKUP_DIR
+sudo nextcloud.occ config:system:get trusted_domains
+```
 
-# Enable maintenance mode
-sudo nextcloud.occ maintenance:mode --on
+### Issue: Infinite redirect loop
+**Solution**: Ensure trusted_proxies is set:
+```bash
+sudo nextcloud.occ config:system:get trusted_proxies
+```
 
-# Backup data directory
-tar -czf $BACKUP_DIR/nextcloud_data_$TIMESTAMP.tar.gz /var/snap/nextcloud/common/nextcloud/data
+### Issue: SSL certificate errors
+**Solution**: Check overwriteprotocol setting:
+```bash
+sudo nextcloud.occ config:system:get overwriteprotocol
+```
 
-# Export database
-sudo nextcloud.export > $BACKUP_DIR/nextcloud_db_$TIMESTAMP.sql
+## Next Steps
 
-# Disable maintenance mode
-sudo nextcloud.occ maintenance:mode --off
-
-# Keep only last 7 backups
-ls -t $BACKUP_DIR/*.tar.gz | tail -n +8 | xargs -r rm
-ls -t $BACKUP_DIR/*.sql | tail -n +8 | xargs -r rm
-
-echo "Backup completed: $TIMESTAMP"
+- [Nginx Reverse Proxy & SSL](03-nginx-reverse-proxy.md)
+- [Firewall Configuration](../04-security/01-firewall.md)
