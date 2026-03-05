@@ -10,7 +10,9 @@ Brief description: Create VM-105 for OpenLDAP directory server with 1 vCPU, 2GB 
 - **RAM**: 2 GiB
 - **Disk**: 10 GiB (ZFS)
 - **OS**: Ubuntu Server 24.04 LTS
-- **Network**: vmbr0
+- **Network**: vmbr2 (private internal network)
+- **Static IP**: 192.168.192.105/18
+- **Gateway**: 192.168.192.5
 - **Purpose**: LDAP directory services
 
 ## Prerequisites
@@ -65,10 +67,13 @@ Click **Next**
 
 ### Step 8: Network
 
-- **Bridge**: vmbr0
+- **Bridge**: vmbr2 (private internal network)
 - **Model**: VirtIO
 
 Click **Next**
+
+!!! note "vmbr2 Configuration"
+    This VM uses the internal private network (vmbr2) with NAT. Only Keycloak should access LDAP ports.
 
 ### Step 9: Confirm
 
@@ -80,7 +85,14 @@ Click **Finish**
 2. Open Console
 3. Install Ubuntu:
 
-**Network**: Record IP
+**Network Configuration**:
+- Select the network interface (ens18)
+- Choose **Configure network manually**
+- Enter:
+  - **IP Address**: 192.168.192.105
+  - **Netmask**: 255.255.192.0 (/18)
+  - **Gateway**: 192.168.192.5
+  - **Name servers**: 8.8.8.8, 1.1.1.1
 
 **Profile**:
 - Server name: openldap
@@ -94,6 +106,12 @@ Click **Finish**
 ### Step 11: Post-Installation
 
 ```bash
+# Verify IP
+ip addr show
+
+# Verify gateway
+ip route show
+
 # Update system
 sudo apt update && sudo apt upgrade -y
 
@@ -105,7 +123,7 @@ sudo apt install -y ldap-utils
 
 Add to inventory:
 ```
-openldap | 105 | 10.0.0.105 | ldap.example.com | LDAP Port 389/636
+openldap | 105 | vmbr2 | 192.168.192.105 | ldap.example.com | LDAP Port 389/636
 ```
 
 ## Verification

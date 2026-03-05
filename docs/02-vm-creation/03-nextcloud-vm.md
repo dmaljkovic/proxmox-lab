@@ -10,7 +10,9 @@ Brief description: Create VM-102 for Nextcloud with 2 vCPU, 6GB RAM, and 50GB st
 - **RAM**: 6 GiB (6144 MiB)
 - **Disk**: 50 GiB (ZFS)
 - **OS**: Ubuntu Server 24.04 LTS
-- **Network**: vmbr0
+- **Network**: vmbr2 (private internal network)
+- **Static IP**: 192.168.192.102/18
+- **Gateway**: 192.168.192.5
 - **Purpose**: Nextcloud file sync and share
 
 ## Prerequisites
@@ -81,10 +83,13 @@ Click **Next**
 
 ### Step 8: Network Tab
 
-- **Bridge**: vmbr0
+- **Bridge**: vmbr2
 - **Model**: VirtIO (paravirtualized)
 
 Click **Next**
+
+!!! note "vmbr2 Configuration"
+    This VM uses the internal private network (vmbr2) with NAT. The Nginx Proxy will handle external access to Nextcloud.
 
 ### Step 9: Confirm
 
@@ -110,9 +115,13 @@ Click **Finish**
 **Keyboard Layout**: Your layout
 
 **Network Configuration**:
-- DHCP will assign IP
-- **Record this IP address**
-- Format: 10.0.0.xxx
+- Select the network interface (ens18)
+- Choose **Configure network manually**
+- Enter the following:
+  - **IP Address**: 192.168.192.102
+  - **Netmask**: 255.255.192.0 (/18)
+  - **Gateway**: 192.168.192.5
+  - **Name servers**: 8.8.8.8, 1.1.1.1
 
 **Proxy**: (none)
 
@@ -132,7 +141,9 @@ Click **Finish**
 **SSH**:
 - [x] Install OpenSSH server
 
-**Server Snaps**: Skip all
+**Server Snaps**:
+- Select **nextcloud** snap for easy installation (recommended)
+- Or skip and install manually (see [Nextcloud Installation](../03-software/02-nextcloud.md))
 
 **Complete** and reboot
 
@@ -145,11 +156,15 @@ After reboot:
    ```bash
    ip addr show
    ```
-3. Verify connectivity:
+3. Verify gateway:
+   ```bash
+   ip route show
+   ```
+4. Verify connectivity:
    ```bash
    ping google.com
    ```
-4. Update system:
+5. Update system:
    ```bash
    sudo apt update && sudo apt upgrade -y
    ```
@@ -157,9 +172,9 @@ After reboot:
 ### Step 13: Record IP Address
 
 !!! important "Update IP Inventory"
-    Add the IP address to your documentation:
+    The static IP 192.168.192.102 has been configured. Add to your documentation:
     ```
-    nextcloud | 102 | 10.0.0.102 | cloud.example.com | Nextcloud Port 80/443
+    nextcloud | 102 | vmbr2 | 192.168.192.102 | cloud.example.com | Nextcloud Port 80/443
     ```
 
 ## Verification

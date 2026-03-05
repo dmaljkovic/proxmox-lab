@@ -23,27 +23,33 @@ Brief description: Plan and document your six virtual machines before creation.
 
 Copy this table and fill in your actual IP addresses as you create each VM:
 
+### Network Configuration
+
+Based on your [network setup](../01-preparation/03-network-configuration.md):
+- **vmbr0**: Public network (direct internet access) - for Nginx Proxy only
+- **vmbr2**: Private internal network (192.168.192.0/18 with NAT) - for all other VMs
+
 ### Your Infrastructure IP Table
 
-| VM Name | VM ID | Internal IP | Public Domain | Services |
-|---------|-------|-------------|---------------|----------|
-| rocketchat | 101 | `___` | chat.example.com | Rocket.Chat Port 3000 |
-| nextcloud | 102 | `___` | cloud.example.com | Nextcloud Port 80/443 |
-| nginx-proxy | 103 | `___` | proxy.example.com | Nginx Port 80/443 |
-| mkdocs | 104 | `___` | docs.example.com | MkDocs Port 8000 |
-| openldap | 105 | `___` | ldap.example.com | LDAP Port 389/636 |
-| keycloak | 106 | `___` | auth.example.com | Keycloak Port 8080 |
+| VM Name | VM ID | Bridge | Internal IP | Public Domain | Services |
+|---------|-------|--------|-------------|---------------|----------|
+| rocketchat | 101 | vmbr2 | `___` | chat.example.com | Rocket.Chat Port 3000 |
+| nextcloud | 102 | vmbr2 | `___` | cloud.example.com | Nextcloud Port 80/443 |
+| nginx-proxy | 103 | vmbr0 | `___` | proxy.example.com | Nginx Port 80/443 |
+| mkdocs | 104 | vmbr2 | `___` | docs.example.com | MkDocs Port 8000 |
+| openldap | 105 | vmbr2 | `___` | ldap.example.com | LDAP Port 389/636 |
+| keycloak | 106 | vmbr2 | `___` | auth.example.com | Keycloak Port 8080 |
 
 ### Example (Filled)
 
-| VM Name | VM ID | Internal IP | Public Domain | Services |
-|---------|-------|-------------|---------------|----------|
-| rocketchat | 101 | 10.0.0.101 | chat.example.com | Rocket.Chat Port 3000 |
-| nextcloud | 102 | 10.0.0.102 | cloud.example.com | Nextcloud Port 80/443 |
-| nginx-proxy | 103 | 10.0.0.103 | proxy.example.com | Nginx Port 80/443 |
-| mkdocs | 104 | 10.0.0.104 | docs.example.com | MkDocs Port 8000 |
-| openldap | 105 | 10.0.0.105 | ldap.example.com | LDAP Port 389/636 |
-| keycloak | 106 | 10.0.0.106 | auth.example.com | Keycloak Port 8080 |
+| VM Name | VM ID | Bridge | Internal IP | Public Domain | Services |
+|---------|-------|--------|-------------|---------------|----------|
+| rocketchat | 101 | vmbr2 | 192.168.192.101 | chat.example.com | Rocket.Chat Port 3000 |
+| nextcloud | 102 | vmbr2 | 192.168.192.102 | cloud.example.com | Nextcloud Port 80/443 |
+| nginx-proxy | 103 | vmbr0 | 192.168.192.103 | proxy.example.com | Nginx Port 80/443 |
+| mkdocs | 104 | vmbr2 | 192.168.192.104 | docs.example.com | MkDocs Port 8000 |
+| openldap | 105 | vmbr2 | 192.168.192.105 | ldap.example.com | LDAP Port 389/636 |
+| keycloak | 106 | vmbr2 | 192.168.192.106 | auth.example.com | Keycloak Port 8080 |
 
 ## Network Architecture
 
@@ -51,13 +57,15 @@ Copy this table and fill in your actual IP addresses as you create each VM:
 %%{init: {'theme': 'dark'}}%%
 graph TB
     subgraph "Proxmox Host"
-        subgraph "vmbr0 Bridge Network"
-            VM1[VM-101<br/>Rocket.Chat<br/><rocketchat-ip>:3000]
-            VM2[VM-102<br/>Nextcloud<br/><nextcloud-ip>:80]
-            VM3[VM-103<br/>Nginx Proxy<br/><nginx-ip>:80/443]
-            VM4[VM-104<br/>MkDocs<br/><mkdocs-ip>:8000]
-            VM5[VM-105<br/>OpenLDAP<br/><ldap-ip>:389]
-            VM6[VM-106<br/>Keycloak<br/><keycloak-ip>:8080]
+        subgraph "vmbr0 (Public)"
+            VM3[VM-103<br/>Nginx Proxy<br/>192.168.192.103:80/443]
+        end
+        subgraph "vmbr2 (Private NAT)"
+            VM1[VM-101<br/>Rocket.Chat<br/>192.168.192.101:3000]
+            VM2[VM-102<br/>Nextcloud<br/>192.168.192.102:80]
+            VM4[VM-104<br/>MkDocs<br/>192.168.192.104:8000]
+            VM5[VM-105<br/>OpenLDAP<br/>192.168.192.105:389]
+            VM6[VM-106<br/>Keycloak<br/>192.168.192.106:8080]
         end
     end
     
@@ -71,10 +79,10 @@ graph TB
 
 ## Prerequisites
 
-- [ ] Proxmox VE 8.2 installed and accessible
+- [ ] Proxmox VE installed and accessible
 - [ ] ZFS storage pool `rpool` visible in Proxmox
 - [ ] Ubuntu Server 24.04 LTS ISO uploaded (see below)
-- [ ] Network bridge `vmbr0` configured (default)
+- [ ] Network bridges `vmbr0` and `vmbr2` configured (see [Network Configuration](../01-preparation/03-network-configuration.md))
 
 ## Upload Ubuntu ISO
 
@@ -119,7 +127,7 @@ Before proceeding to individual VM creation:
 - [ ] Ubuntu 24.04 LTS ISO uploaded to Proxmox
 - [ ] IP address plan documented
 - [ ] Sufficient storage space in ZFS pool (minimum 130GB total)
-- [ ] Network bridge `vmbr0` configured
+- [ ] Network bridges `vmbr0` and `vmbr2` configured
 - [ ] Proxmox Web UI accessible
 
 ## Time Estimate
@@ -145,8 +153,9 @@ zpool list
 
 ### Issue: Network bridge not configured
 **Solution**: 
-- Proxmox creates `vmbr0` by default
-- If missing, check network configuration in Datacenter → Node → Network
+- Check network configuration in Datacenter → Node → Network
+- Ensure both vmbr0 (public) and vmbr2 (private/NAT) are configured
+- See [Network Configuration](../01-preparation/03-network-configuration.md) for setup details
 
 ## Next Steps
 

@@ -10,7 +10,9 @@ Brief description: Create VM-104 for MkDocs documentation server with 1 vCPU, 2G
 - **RAM**: 2 GiB
 - **Disk**: 10 GiB (ZFS)
 - **OS**: Ubuntu Server 24.04 LTS
-- **Network**: vmbr0
+- **Network**: vmbr2 (private internal network)
+- **Static IP**: 192.168.192.104/18
+- **Gateway**: 192.168.192.5
 - **Purpose**: Documentation server (MkDocs)
 
 ## Prerequisites
@@ -68,10 +70,13 @@ Click **Next**
 
 ### Step 8: Network
 
-- **Bridge**: vmbr0
+- **Bridge**: vmbr2 (private internal network)
 - **Model**: VirtIO
 
 Click **Next**
+
+!!! note "vmbr2 Configuration"
+    This VM uses the internal private network (vmbr2) with NAT. The Nginx Proxy will handle external access to MkDocs.
 
 ### Step 9: Confirm
 
@@ -83,7 +88,14 @@ Review and click **Finish**
 2. Open Console
 3. Install Ubuntu:
 
-**Network**: Record IP address
+**Network Configuration**:
+- Select the network interface (ens18)
+- Choose **Configure network manually**
+- Enter:
+  - **IP Address**: 192.168.192.104
+  - **Netmask**: 255.255.192.0 (/18)
+  - **Gateway**: 192.168.192.5
+  - **Name servers**: 8.8.8.8, 1.1.1.1
 
 **Profile**:
 - Server name: mkdocs
@@ -97,6 +109,12 @@ Review and click **Finish**
 ### Step 11: Post-Installation
 
 ```bash
+# Verify IP
+ip addr show
+
+# Verify gateway
+ip route show
+
 # Update
 sudo apt update && sudo apt upgrade -y
 
@@ -113,7 +131,7 @@ git --version
 
 Add to inventory:
 ```
-mkdocs | 104 | 10.0.0.104 | docs.example.com | MkDocs Port 8000
+mkdocs | 104 | vmbr2 | 192.168.192.104 | docs.example.com | MkDocs Port 8000
 ```
 
 ## Verification

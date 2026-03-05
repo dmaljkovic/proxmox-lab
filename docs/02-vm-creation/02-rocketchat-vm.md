@@ -10,7 +10,9 @@ Brief description: Create VM-101 for Rocket.Chat with 2 vCPU, 4GB RAM, and 30GB 
 - **RAM**: 4 GiB
 - **Disk**: 30 GiB (ZFS)
 - **OS**: Ubuntu Server 24.04 LTS
-- **Network**: vmbr0
+- **Network**: vmbr2 (private internal network)
+- **Static IP**: 192.168.192.101/18
+- **Gateway**: 192.168.192.5
 - **Purpose**: Rocket.Chat server
 
 ## Prerequisites
@@ -83,12 +85,15 @@ Click **Next**
 
 ### Step 8: Network Tab
 
-- **Bridge**: vmbr0
+- **Bridge**: vmbr2
 - **VLAN Tag**: (none)
 - **Firewall**: (unchecked for now)
 - **Model**: VirtIO (paravirtualized)
 
 Click **Next**
+
+!!! note "vmbr2 Configuration"
+    This VM uses the internal private network (vmbr2) with NAT. The Nginx Proxy will handle external access to Rocket.Chat.
 
 ### Step 9: Confirm Tab
 
@@ -118,9 +123,13 @@ Follow the Ubuntu Server installation wizard:
 **Keyboard Layout**: Your preferred layout
 
 **Network Configuration**:
-- DHCP should assign an IP automatically
-- **Record this IP address** for later use
-- Will be in format: 10.0.0.xxx
+- Select the network interface (ens18)
+- Choose **Configure network manually**
+- Enter the following:
+  - **IP Address**: 192.168.192.101
+  - **Netmask**: 255.255.192.0 (/18)
+  - **Gateway**: 192.168.192.5
+  - **Name servers**: 8.8.8.8, 1.1.1.1
 
 **Proxy**: Leave blank (unless required)
 
@@ -142,7 +151,8 @@ Follow the Ubuntu Server installation wizard:
 - [ ] Import SSH identity (skip for now)
 
 **Featured Server Snaps**:
-- Skip all (we'll install manually)
+- Select **rocketchat** snap for easy installation
+- Or skip all and install manually (see [Rocket.Chat Installation](../03-software/01-rocketchat.md))
 
 **Complete Installation**:
 - Wait for installation to finish
@@ -159,11 +169,15 @@ After reboot:
    ```bash
    ip addr show
    ```
-4. Test connectivity:
+4. Verify gateway:
+   ```bash
+   ip route show
+   ```
+5. Test connectivity:
    ```bash
    ping google.com
    ```
-5. Update system:
+6. Update system:
    ```bash
    sudo apt update && sudo apt upgrade -y
    ```
@@ -171,14 +185,14 @@ After reboot:
 ### Step 13: Document IP Address
 
 !!! important "Record IP Address"
-    Write down the assigned IP address. You will need it for:
+    The static IP 192.168.192.101 has been configured. You will need it for:
     - Nginx reverse proxy configuration
     - Monitoring setup
     - SSH access
 
 Add to your IP inventory table:
 ```
-rocket-chat | 101 | 10.0.0.101 | chat.example.com | Rocket.Chat Port 3000
+rocket-chat | 101 | vmbr2 | 192.168.192.101 | chat.example.com | Rocket.Chat Port 3000
 ```
 
 ## Verification
@@ -213,9 +227,9 @@ Apply:
 sudo sysctl -p
 ```
 
-### Set Static IP (Optional)
+### Set Static IP (Optional - Already Configured During Install)
 
-If you want to set a static IP instead of DHCP:
+If you need to modify the static IP configuration:
 
 ```bash
 sudo nano /etc/netplan/00-installer-config.yaml
@@ -229,10 +243,10 @@ network:
     ens18:
       dhcp4: no
       addresses:
-        - 10.0.0.101/24
+        - 192.168.192.101/18
       routes:
         - to: default
-          via: 10.0.0.1
+          via: 192.168.192.5
       nameservers:
         addresses:
           - 8.8.8.8

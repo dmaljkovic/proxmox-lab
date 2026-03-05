@@ -10,7 +10,9 @@ Brief description: Create VM-106 for Keycloak SSO server with 2 vCPU, 4GB RAM, a
 - **RAM**: 4 GiB
 - **Disk**: 20 GiB (ZFS)
 - **OS**: Ubuntu Server 24.04 LTS
-- **Network**: vmbr0
+- **Network**: vmbr2 (private internal network)
+- **Static IP**: 192.168.192.106/18
+- **Gateway**: 192.168.192.5
 - **Purpose**: SSO and Identity Provider (IdP)
 
 ## Prerequisites
@@ -73,10 +75,13 @@ Click **Next**
 
 ### Step 8: Network
 
-- **Bridge**: vmbr0
+- **Bridge**: vmbr2 (private internal network)
 - **Model**: VirtIO
 
 Click **Next**
+
+!!! note "vmbr2 Configuration"
+    This VM uses the internal private network (vmbr2) with NAT. The Nginx Proxy will handle external access to Keycloak.
 
 ### Step 9: Confirm
 
@@ -95,7 +100,14 @@ Click **Finish**
 2. Open Console
 3. Install Ubuntu:
 
-**Network**: Record IP address
+**Network Configuration**:
+- Select the network interface (ens18)
+- Choose **Configure network manually**
+- Enter:
+  - **IP Address**: 192.168.192.106
+  - **Netmask**: 255.255.192.0 (/18)
+  - **Gateway**: 192.168.192.5
+  - **Name servers**: 8.8.8.8, 1.1.1.1
 
 **Profile**:
 - Server name: keycloak
@@ -109,6 +121,12 @@ Click **Finish**
 ### Step 11: Post-Installation
 
 ```bash
+# Verify IP
+ip addr show
+
+# Verify gateway
+ip route show
+
 # Update system
 sudo apt update && sudo apt upgrade -y
 
@@ -130,7 +148,7 @@ OpenJDK 64-Bit Server VM (build 17.0.x+xx-Ubuntu-xx, mixed mode, sharing)
 
 Add to inventory:
 ```
-keycloak | 106 | 10.0.0.106 | auth.example.com | Keycloak Port 8080
+keycloak | 106 | vmbr2 | 192.168.192.106 | auth.example.com | Keycloak Port 8080
 ```
 
 ## Verification
