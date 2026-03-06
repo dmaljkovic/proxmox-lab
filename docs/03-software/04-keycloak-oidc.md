@@ -1,116 +1,115 @@
 # Keycloak Installation and OIDC Configuration
 
-Brief description: Install Keycloak 24.0.0, configure OpenLDAP federation, and set up OIDC for SSO.
+Brief description: Install Keycloak 26.5.5 and set up OIDC for SSO.
 
 ## What You'll Learn
 
-- How to install Keycloak 24.0.0
-- How to configure OpenLDAP user federation
+- How to install Keycloak 26.5.5
 - How to create OIDC clients for SSO
 - How to integrate with Rocket.Chat and Nextcloud
 
 ## Prerequisites
 
 - [ ] VM-106 created and Ubuntu 24.04 LTS installed
-- [ ] VM-105 (OpenLDAP) created and accessible
 - [ ] OpenJDK 17 installed on Keycloak VM
 - [ ] IP addresses documented
 - [ ] Nginx reverse proxy configured
 
 ## Estimated Time
 
-6-8 hours (Days 7-8 combined)
+2-3 hours
 
 ## Part 1: Keycloak Installation
 
-### Step 1: SSH to Keycloak VM
-
-```bash
-ssh admin@<keycloak-ip>
-```
-
-### Step 2: Verify Java Installation
-
-```bash
-java -version
-```
-
-Should show OpenJDK 17.
-
-If not installed:
+### Step 1: Update System and Install Java
 
 ```bash
 sudo apt update
+sudo apt upgrade -y
 sudo apt install -y openjdk-17-jdk
 ```
 
-### Step 3: Download and Install Keycloak
+Verify:
+
+```bash
+java -version   # Should show openjdk 17.x
+```
+
+### Step 2: Download and Install Keycloak (Standalone Tarball Method)
+
+No official APT package exists from Keycloak project → use the recommended tar.gz distribution.
 
 ```bash
 cd /tmp
-wget https://github.com/keycloak/keycloak/releases/download/24.0.0/keycloak-24.0.0.tar.gz
+wget https://github.com/keycloak/keycloak/releases/download/26.5.5/keycloak-26.5.5.tar.gz
+sudo tar -xzf keycloak-26.5.5.tar.gz -C /opt/
+sudo mv /opt/keycloak-26.5.5 /opt/keycloak
 ```
 
-Extract:
-
-```bash
-sudo tar -xzf keycloak-24.0.0.tar.gz -C /opt/
-sudo mv /opt/keycloak-24.0.0 /opt/keycloak
-```
-
-### Step 4: Create Keycloak User
+### Step 3: Create Dedicated Keycloak User/Group and Set Permissions
 
 ```bash
 sudo groupadd keycloak
 sudo useradd -r -g keycloak -d /opt/keycloak -s /sbin/nologin keycloak
+
+sudo chown -R keycloak:keycloak /opt/keycloak
+sudo chmod -R u+rwX /opt/keycloak
+
+sudo mkdir -p /opt/keycloak/data /var/log/keycloak
+sudo chown -R keycloak:keycloak /opt/keycloak/data /var/log/keycloak
 ```
 
-Set ownership:
+### Step 4: Build Optimized Image (Production Recommendation)
 
 ```bash
-sudo chown -R keycloak:keycloak /opt/keycloak
-sudo mkdir -p /opt/keycloak/data
-sudo mkdir -p /var/log/keycloak
-sudo chown keycloak:keycloak /opt/keycloak/data /var/log/keycloak
+cd /opt/keycloak
+sudo -u keycloak bin/kc.sh build
 ```
 
-### Step 5: Create Systemd Service
+### Step 5: Create Systemd Service File
 
 ```bash
 sudo nano /etc/systemd/system/keycloak.service
 ```
 
-Add:
+Paste (customize hostname, password, and internal listening):
 
 ```ini
 [Unit]
-Description=Keycloak Identity Provider
+Description=Keycloak Identity and Access Management
 After=network.target
 
 [Service]
-Type=idle
+Type=simple
 User=keycloak
 Group=keycloak
-ExecStart=/opt/keycloak/bin/kc.sh start --hostname=auth.example.com --http-port=8080 --proxy-headers=xforwarded --log=console
 WorkingDirectory=/opt/keycloak
+ExecStart=/opt/keycloak/bin/kc.sh start --optimized \
+  --hostname=auth.example.com \
+  --http-port=8080 \
+  --http-host=0.0.0.0 \
+  --proxy-headers=xforwarded \
+  --log=console,file --log-file=/var/log/keycloak/keycloak.log
+
 Restart=always
 RestartSec=10
+
 Environment="JAVA_OPTS=-Xms1024m -Xmx2048m -Djava.security.egd=file:/dev/./urandom"
+
+# ONLY for FIRST start – remove these lines after initial setup!
+Environment="KC_BOOTSTRAP_ADMIN_USERNAME=admin"
+Environment="KC_BOOTSTRAP_ADMIN_PASSWORD=<very-strong-password-here>"
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-### Step 6: Create Admin User
+- `--hostname=...`: Your public domain (Keycloak enforces redirects/URIs).
+- `--proxy-headers=xforwarded`: Trusts headers from Nginx proxy.
 
-```bash
-cd /opt/keycloak
-sudo -u keycloak bin/kc.sh bootstrap-admin user --username admin --password <admin-password>
-```
+Remove the two `KC_BOOTSTRAP_ADMIN_*` lines after first successful start (edit file → sudo systemctl daemon-reload → restart).
 
-Replace `<admin-password>` with a strong password.
-
-### Step 7: Start Keycloak
+### Step 6: Start and Enable Service
 
 ```bash
 sudo systemctl daemon-reload
@@ -118,97 +117,36 @@ sudo systemctl enable keycloak
 sudo systemctl start keycloak
 ```
 
-Check status:
+Check:
 
 ```bash
 sudo systemctl status keycloak
+sudo journalctl -u keycloak -f   # Wait for "Listening on: http://0.0.0.0:8080"
 ```
 
-View logs:
+### Step 7: Firewall Hardening (UFW – Part of CIS Benchmarking)
+
+Allow SSH + internal traffic only from Nginx proxy VM (adjust subnet or specific IP):
 
 ```bash
-sudo journalctl -u keycloak -f
+sudo ufw allow from <nginx-vm-internal-ip> to any port 8080 proto tcp
+sudo ufw allow OpenSSH
+sudo ufw --force enable
+sudo ufw status
 ```
 
-Wait for "Listening on: http://0.0.0.0:8080"
+→ No public access to 8080.
 
-Press Ctrl+C to exit logs.
+### Step 8: Initial Access & Admin Console (Temporary – via Internal)
 
-### Step 8: Access Admin Console
+From another internal VM (or Proxmox console forwarding):
 
-Open browser: `https://auth.example.com/admin`
+`http://<keycloak-internal-ip>:8080/admin`
 
-Login:
-- Username: admin
-- Password: [password you set]
+Login: admin / <password from service file>
 
-## Part 2: OpenLDAP Configuration
+After first login → remove bootstrap env vars from service file, reload & restart.
 
-### Step 9: Configure OpenLDAP (VM-105)
+## Part 2: OIDC Client Configuration
 
-SSH to OpenLDAP VM:
-
-```bash
-ssh admin@<openldap-ip>
-```
-
-Install OpenLDAP:
-
-```bash
-sudo apt update
-sudo apt install -y slapd ldap-utils
-```
-
-Reconfigure:
-
-```bash
-sudo dpkg-reconfigure slapd
-```
-
-Answer wizard:
-- Omit OpenLDAP server configuration? **No**
-- DNS domain name: **example.com**
-- Organization name: **Your Organization**
-- Administrator password: [strong password]
-- Database backend: **MDB**
-- Remove database when slapd is purged? **No**
-- Move old database? **Yes**
-
-### Step 10: Configure LDAP TLS
-
-Create certificate directory:
-
-```bash
-sudo mkdir -p /etc/ldap/certs
-```
-
-Generate self-signed certificate:
-
-```bash
-cd /etc/ldap/certs
-sudo openssl req -new -x509 -days 365 -nodes \
-  -out ldap.crt \
-  -keyout ldap.key \
-  -subj "/C=US/ST=State/L=City/O=Organization/CN=ldap.example.com"
-```
-
-Set permissions:
-
-```bash
-sudo chown openldap:openldap /etc/ldap/certs/ldap.key
-sudo chmod 600 /etc/ldap/certs/ldap.key
-```
-
-### Step 11: Create Base Structure
-
-Create LDIF file:
-
-```bash
-cat > ~/base-structure.ldif << 'EOF'
-dn: ou=users,dc=example,dc=com
-objectClass: organizationalUnit
-ou: users
-
-dn: ou=groups,dc=example,dc=com
-objectClass: organizationalUnit
-ou: groups
+(TBD: Steps to create OIDC clients for Rocket.Chat and Nextcloud integration)
