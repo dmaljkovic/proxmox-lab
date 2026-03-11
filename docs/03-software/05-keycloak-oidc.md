@@ -124,20 +124,7 @@ sudo systemctl status keycloak
 sudo journalctl -u keycloak -f   # Wait for "Listening on: http://0.0.0.0:8080"
 ```
 
-### Step 7: Firewall Hardening (UFW – Part of CIS Benchmarking)
-
-Allow SSH + internal traffic only from Nginx proxy VM (adjust subnet or specific IP):
-
-```bash
-sudo ufw allow from <nginx-vm-internal-ip> to any port 8080 proto tcp
-sudo ufw allow OpenSSH
-sudo ufw --force enable
-sudo ufw status
-```
-
-→ No public access to 8080.
-
-### Step 8: Initial Access & Admin Console (Temporary – via Internal)
+### Step 7: Initial Access & Admin Console (Temporary – via Internal)
 
 From another internal VM (or Proxmox console forwarding):
 
@@ -149,4 +136,153 @@ After first login → remove bootstrap env vars from service file, reload & rest
 
 ## Part 2: OIDC Client Configuration
 
-(TBD: Steps to create OIDC clients for Rocket.Chat and Nextcloud integration)
+### Add LDAP Federation (Keycloak → OpenLDAP)
+
+Open the Keycloak Admin Console.
+
+`https://auth.unseen-uni.online`
+
+Login with the admin account.
+
+Navigate:
+
+```
+Realm: example
+→ User Federation
+→ Add provider
+→ ldap
+```
+
+**Basic settings**
+
+| Field | Value |
+| Vendor | Other |
+| Connection URL | `ldap://LDAP_VM_IP:389` |
+| Bind DN | `cn=admin,dc=unseen-uni,dc=online` |
+| Bind Credential | LDAP admin password |
+| Users DN | `ou=people,dc=unseen-uni,dc=online` |
+| Username LDAP attribute | `uid` |
+| RDN LDAP attribute | `uid` |
+| UUID LDAP attribute | `entryUUID` |
+| User Object Classes | `inetOrgPerson` |
+| Import users | ON |
+
+**Set:**
+
+- Import Users = ON
+- Edit Mode = READ_ONLY
+
+Then click:
+
+- Save
+- Test connection
+
+Click:
+
+- Test connection
+- Test authentication
+
+Then click:
+
+- Synchronize all users
+
+Your testuser should now appear in:
+
+- Users → View all users
+
+### Create OIDC Clients
+
+Clients represent applications that use Keycloak login.
+
+Go to:
+
+`Clients → Create client`
+
+#### Client 1 — Rocket.Chat
+
+**General settings**
+
+| Field | Value |
+| Client type | OpenID Connect |
+| Client ID | `rocketchat` |
+| Name | Rocket.Chat |
+
+Click Next
+
+**Capability config**
+
+Enable:
+
+- Client authentication = ON
+- Authorization = OFF
+- Standard flow = ON
+
+Click Next
+
+**Login settings**
+
+| Field | Value |
+| Root URL | `https://chat.unseen-uni.online` |
+| Home URL | `https://chat.unseen-uni.online` |
+| Valid redirect URIs | `https://chat.unseen-uni.online/*` |
+| Web origins | `https://chat.unseen-uni.online` |
+
+Click Save
+
+#### Client 2 — Nextcloud
+
+Create another client.
+
+**General**
+
+| Field | Value |
+| Client ID | `nextcloud` |
+| Client type | OpenID Connect |
+
+**Login settings**
+
+| Field | Value |
+| Root URL | `https://cloud.unseen-uni.online` |
+| Valid redirect URIs | `https://cloud.unseen-uni.online/*` |
+| Web origins | `https://cloud.unseen-uni.online` |
+
+Save.
+
+### Get Client Secrets
+
+For each client:
+
+1. Clients → select client → Credentials tab
+
+You will see:
+
+**Client Secret**
+
+Copy it.
+
+Example:
+
+- `rocketchat secret: 4d4c8c1a-xxxx-xxxx`
+- `nextcloud secret: 39a8b71f-xxxx-xxxx`
+
+Save them somewhere safe (password manager).
+
+### Final Architecture
+
+Your authentication flow becomes:
+
+```
+User
+ ↓
+Rocket.Chat / Nextcloud
+ ↓
+Keycloak (OIDC)
+ ↓
+OpenLDAP
+```
+
+So:
+
+- **LDAP** → identity storage
+- **Keycloak** → authentication provider
+- **Apps** → trust Keycloak
