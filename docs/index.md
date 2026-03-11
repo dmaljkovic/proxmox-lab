@@ -88,7 +88,6 @@ graph TB
 |----------|------------|---------|
 | Virtualization | Proxmox VE | 8.2 |
 | Operating System | Ubuntu Server | 24.04 LTS |
-| Container Runtime | Docker | 24.x |
 | Chat Platform | Rocket.Chat | 6.x |
 | File Sync | Nextcloud | 28.x |
 | Identity Provider | Keycloak | 24.0.0 |
@@ -113,12 +112,6 @@ graph TB
     3. Verification steps
     4. Daily completion checklist
 
-## Support
-
-For issues or questions:
-- Review the [Troubleshooting Guide](reference/troubleshooting.md)
-- Check [Common Commands](reference/commands.md)
-- Refer to specific technology documentation
 
 ## Next Steps
 
