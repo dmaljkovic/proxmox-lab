@@ -65,7 +65,8 @@ nav:
     - 03-software/01-rocketchat.md
     - 03-software/02-nextcloud.md
     - 03-software/03-nginx-reverse-proxy.md
-    - 03-software/04-keycloak-oidc.md
+    - 03-software/04-ldap.md
+    - 03-software/05-keycloak-oidc.md
   - Security:
     - 04-security/01-firewall.md
     - 04-security/02-fail2ban.md
