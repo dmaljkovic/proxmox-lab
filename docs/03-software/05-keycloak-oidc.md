@@ -136,171 +136,141 @@ After first login → remove bootstrap env vars from service file, reload & rest
 
 ## Part 2: OIDC Client Configuration
 
-### Add LDAP Federation (Keycloak → OpenLDAP)
+This section covers connecting Keycloak to your OpenLDAP directory and creating OIDC clients for single sign-on.
 
-Open the Keycloak Admin Console.
+### Step 1: Connect Keycloak to OpenLDAP
 
-`https://auth.example.com`
+Keycloak can authenticate users against your existing LDAP directory.
 
-Login with the admin account.
+1. Open the Keycloak Admin Console: `https://auth.example.com`
+2. Login with your admin credentials
+3. Select the **example** realm
+4. Navigate to **User Federation** → **Add provider** → **ldap**
 
-Navigate:
+Configure the LDAP federation settings:
 
-```
-Realm: example
-→ User Federation
-→ Add provider
-→ ldap
-```
-
-**Basic settings**
-
-| Field | Value |
+| Setting | Value |
+|---------|-------|
 | Vendor | Other |
 | Connection URL | `ldap://LDAP_VM_IP:389` |
 | Bind DN | `cn=admin,dc=example,dc=com` |
 | Bind Credential | LDAP_ADMIN_PASSWORD |
 | Users DN | `ou=people,dc=example,dc=com` |
-| Username LDAP attribute | `uid` |
-| RDN LDAP attribute | `uid` |
-| UUID LDAP attribute | `entryUUID` |
-| User Object Classes | `inetOrgPerson` |
-| Import users | ON |
+| Username LDAP attribute | uid |
+| RDN LDAP attribute | uid |
+| UUID LDAP attribute | entryUUID |
+| User Object Classes | inetOrgPerson |
 
-**Set:**
+Under **Sync Settings**, enable:
+- Import Users: ON
+- Edit Mode: READ_ONLY
 
-- Import Users = ON
-- Edit Mode = READ_ONLY
+5. Click **Save**
+6. Click **Test connection** to verify connectivity
+7. Click **Test authentication** to verify bind credentials
+8. Click **Synchronize all users** to import existing users
 
-Then click:
+Verify users appear under **Users** → **View all users**.
 
-- Save
-- Test connection
+### Step 2: Create OIDC Clients
 
-Click:
+OIDC clients allow applications to authenticate users through Keycloak.
 
-- Test connection
-- Test authentication
+#### Rocket.Chat
 
-Then click:
+1. Go to **Clients** → **Create client**
+2. Configure:
 
-- Synchronize all users
-
-Your testuser should now appear in:
-
-- Users → View all users
-
-### Create OIDC Clients
-
-Clients represent applications that use Keycloak login.
-
-Go to:
-
-`Clients → Create client`
-
-#### Client 1 — Rocket.Chat
-
-**General settings**
-
-| Field | Value |
+| Setting | Value |
+|---------|-------|
 | Client type | OpenID Connect |
-| Client ID | `rocketchat` |
+| Client ID | rocketchat |
 | Name | Rocket.Chat |
 
-Click Next
+3. Click **Next**
+4. Enable capability config:
 
-**Capability config**
+| Setting | Value |
+|---------|-------|
+| Client authentication | ON |
+| Authorization | OFF |
+| Standard flow | ON |
 
-Enable:
+5. Click **Next**
+6. Configure login settings:
 
-- Client authentication = ON
-- Authorization = OFF
-- Standard flow = ON
-
-Click Next
-
-**Login settings**
-
-| Field | Value |
+| Setting | Value |
+|---------|-------|
 | Root URL | `https://chat.example.com` |
 | Home URL | `https://chat.example.com` |
 | Valid redirect URIs | `https://chat.example.com/*` |
 | Web origins | `https://chat.example.com` |
 
-Click Save
+7. Click **Save**
 
-#### Client 2 — Nextcloud
+#### Nextcloud
 
-Create another client.
+1. Go to **Clients** → **Create client**
+2. Configure:
 
-**General**
-
-| Field | Value |
-| Client ID | `nextcloud` |
+| Setting | Value |
+|---------|-------|
 | Client type | OpenID Connect |
+| Client ID | nextcloud |
+| Name | Nextcloud |
 
-**Login settings**
+3. Click **Next**
+4. Use default capability config
+5. Configure login settings:
 
-| Field | Value |
+| Setting | Value |
+|---------|-------|
 | Root URL | `https://cloud.example.com` |
 | Valid redirect URIs | `https://cloud.example.com/*` |
 | Web origins | `https://cloud.example.com` |
 
-Save.
+6. Click **Save**
 
-#### Client 3 — LDAP Admin UI
+#### LDAP Admin UI
 
-Create another client.
+1. Go to **Clients** → **Create client**
+2. Configure:
 
-**General**
-
-| Field | Value |
-| Client ID | `ldap-admin` |
+| Setting | Value |
+|---------|-------|
 | Client type | OpenID Connect |
+| Client ID | ldap-admin |
 | Name | LDAP Admin UI |
 
-**Login settings**
+3. Click **Next**
+4. Configure login settings:
 
-| Field | Value |
+| Setting | Value |
+|---------|-------|
 | Valid redirect URIs | `https://ldap.example.com/*` |
 
-Save.
+5. Click **Save**
 
-### Get Client Secrets
+### Step 3: Retrieve Client Secrets
 
-For each client:
+Each OIDC client requires a secret for authentication.
 
-1. Clients → select client → Credentials tab
+1. Go to **Clients** → select client → **Credentials** tab
+2. Copy the **Client Secret**
 
-You will see:
+Store secrets in a password manager:
 
-**Client Secret**
+- Rocket.Chat: `<generated-in-keycloak>`
+- Nextcloud: `<generated-in-keycloak>`
 
-Copy it.
-
-Example:
-
-- `rocketchat secret: <generated-in-keycloak>`
-- `nextcloud secret: <generated-in-keycloak>`
-
-Save them somewhere safe (password manager).
-
-### Final Architecture
-
-Your authentication flow becomes:
+### Authentication Flow
 
 ```
-User
- ↓
-Application (Rocket.Chat / Nextcloud)
- ↓
-Keycloak (OIDC)
- ↓
-OpenLDAP
+User → Application (Rocket.Chat/Nextcloud) → Keycloak (OIDC) → OpenLDAP
 ```
 
-So:
-
-- **OpenLDAP** → identity storage
-- **Keycloak** → authentication provider
-- **Applications** → OIDC clients
+| Component | Role |
+|-----------|------|
+| OpenLDAP | Identity storage |
+| Keycloak | Authentication provider |
+| Applications | OIDC clients |
