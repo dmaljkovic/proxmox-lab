@@ -140,7 +140,7 @@ After first login → remove bootstrap env vars from service file, reload & rest
 
 Open the Keycloak Admin Console.
 
-`https://auth.unseen-uni.online`
+`https://auth.example.com`
 
 Login with the admin account.
 
@@ -158,9 +158,9 @@ Realm: example
 | Field | Value |
 | Vendor | Other |
 | Connection URL | `ldap://LDAP_VM_IP:389` |
-| Bind DN | `cn=admin,dc=unseen-uni,dc=online` |
-| Bind Credential | LDAP admin password |
-| Users DN | `ou=people,dc=unseen-uni,dc=online` |
+| Bind DN | `cn=admin,dc=example,dc=com` |
+| Bind Credential | LDAP_ADMIN_PASSWORD |
+| Users DN | `ou=people,dc=example,dc=com` |
 | Username LDAP attribute | `uid` |
 | RDN LDAP attribute | `uid` |
 | UUID LDAP attribute | `entryUUID` |
@@ -222,10 +222,10 @@ Click Next
 **Login settings**
 
 | Field | Value |
-| Root URL | `https://chat.unseen-uni.online` |
-| Home URL | `https://chat.unseen-uni.online` |
-| Valid redirect URIs | `https://chat.unseen-uni.online/*` |
-| Web origins | `https://chat.unseen-uni.online` |
+| Root URL | `https://chat.example.com` |
+| Home URL | `https://chat.example.com` |
+| Valid redirect URIs | `https://chat.example.com/*` |
+| Web origins | `https://chat.example.com` |
 
 Click Save
 
@@ -242,9 +242,27 @@ Create another client.
 **Login settings**
 
 | Field | Value |
-| Root URL | `https://cloud.unseen-uni.online` |
-| Valid redirect URIs | `https://cloud.unseen-uni.online/*` |
-| Web origins | `https://cloud.unseen-uni.online` |
+| Root URL | `https://cloud.example.com` |
+| Valid redirect URIs | `https://cloud.example.com/*` |
+| Web origins | `https://cloud.example.com` |
+
+Save.
+
+#### Client 3 — LDAP Admin UI
+
+Create another client.
+
+**General**
+
+| Field | Value |
+| Client ID | `ldap-admin` |
+| Client type | OpenID Connect |
+| Name | LDAP Admin UI |
+
+**Login settings**
+
+| Field | Value |
+| Valid redirect URIs | `https://ldap.example.com/*` |
 
 Save.
 
@@ -262,8 +280,8 @@ Copy it.
 
 Example:
 
-- `rocketchat secret: 4d4c8c1a-xxxx-xxxx`
-- `nextcloud secret: 39a8b71f-xxxx-xxxx`
+- `rocketchat secret: <generated-in-keycloak>`
+- `nextcloud secret: <generated-in-keycloak>`
 
 Save them somewhere safe (password manager).
 
@@ -274,7 +292,7 @@ Your authentication flow becomes:
 ```
 User
  ↓
-Rocket.Chat / Nextcloud
+Application (Rocket.Chat / Nextcloud)
  ↓
 Keycloak (OIDC)
  ↓
@@ -283,6 +301,6 @@ OpenLDAP
 
 So:
 
-- **LDAP** → identity storage
+- **OpenLDAP** → identity storage
 - **Keycloak** → authentication provider
-- **Apps** → trust Keycloak
+- **Applications** → OIDC clients
