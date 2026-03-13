@@ -26,7 +26,7 @@ Copy this table and fill in your actual IP addresses as you create each VM:
 ### Network Configuration
 
 Based on your [network setup](../01-preparation/03-network-configuration.md):
-- **vmbr0**: Public network (direct internet access) - for Nginx Proxy only
+- **vmbr0**: Public network (direct internet access) - for port forwarding to internal VMs
 - **vmbr2**: Private internal network (192.168.192.0/18 with NAT) - for all other VMs
 
 ### Your Infrastructure IP Table
@@ -35,7 +35,7 @@ Based on your [network setup](../01-preparation/03-network-configuration.md):
 |---------|-------|--------|-------------|---------------|----------|
 | rocketchat | 101 | vmbr2 | `___` | chat.example.com | Rocket.Chat Port 3000 |
 | nextcloud | 102 | vmbr2 | `___` | cloud.example.com | Nextcloud Port 80/443 |
-| nginx-proxy | 103 | vmbr0 | `___` | proxy.example.com | Nginx Port 80/443 |
+| nginx-proxy | 103 | vmbr2 | `___` | proxy.example.com | Nginx Port 80/443 |
 | mkdocs | 104 | vmbr2 | `___` | docs.example.com | MkDocs Port 8000 |
 | openldap | 105 | vmbr2 | `___` | ldap.example.com | LDAP Port 389/636 |
 | keycloak | 106 | vmbr2 | `___` | auth.example.com | Keycloak Port 8080 |
@@ -57,12 +57,12 @@ Based on your [network setup](../01-preparation/03-network-configuration.md):
 %%{init: {'theme': 'dark'}}%%
 graph TB
     subgraph "Proxmox Host"
-        subgraph "vmbr0 (Public)"
-            VM3[VM-103<br/>Nginx Proxy<br/>192.168.192.103:80/443]
+        subgraph "vmbr0 (Public - Port Forwarding)"
         end
         subgraph "vmbr2 (Private NAT)"
             VM1[VM-101<br/>Rocket.Chat<br/>192.168.192.101:3000]
             VM2[VM-102<br/>Nextcloud<br/>192.168.192.102:80]
+            VM3[VM-103<br/>Nginx Proxy<br/>192.168.192.20:80/443]
             VM4[VM-104<br/>MkDocs<br/>192.168.192.104:8000]
             VM5[VM-105<br/>OpenLDAP<br/>192.168.192.105:389]
             VM6[VM-106<br/>Keycloak<br/>192.168.192.106:8080]
