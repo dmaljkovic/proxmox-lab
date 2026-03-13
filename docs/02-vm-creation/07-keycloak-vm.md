@@ -159,18 +159,6 @@ keycloak | 106 | vmbr2 | 192.168.192.106 | auth.example.com | Keycloak Port 8080
 - [ ] IP address assigned and recorded
 - [ ] System updated
 
-## Common Issues
-
-### Issue: Java not found after installation
-**Solution**: 
-```bash
-sudo update-alternatives --config java
-# Select the correct Java version
-```
-
-### Issue: VM runs slowly during install
-**Solution**: Keycloak VM has adequate resources. Slowdowns during Ubuntu install are normal.
-
 ## Next Steps
 
 All VMs are now created! Proceed to software installation:

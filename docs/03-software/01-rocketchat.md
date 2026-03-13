@@ -198,23 +198,6 @@ sudo snap restart rocketchat
 - [ ] Accessible via domain (chat.example.com)
 - [ ] Admin account created
 
-## Common Issues
-
-### Issue: Rocket.Chat not starting
-**Solution**: Check logs:
-```bash
-sudo snap logs rocketchat -n 100
-```
-
-### Issue: Cannot connect via domain
-**Solution**: 
-- Verify DNS points to your server IP
-- Check nginx configuration: `sudo nginx -t`
-- Check firewall on nginx-proxy: `sudo ufw status`
-
-### Issue: WebSocket connection errors
-**Solution**: Ensure nginx proxy headers include WebSocket support (shown in config above)
-
 ## Next Steps
 
 Proceed to [Nextcloud Installation](02-nextcloud.md) if not already installed.

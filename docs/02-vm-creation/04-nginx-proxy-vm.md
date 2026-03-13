@@ -178,14 +178,6 @@ Apply:
 sudo sysctl -p
 ```
 
-## Common Issues
-
-### Issue: Low resource warnings
-**Solution**: Nginx proxy runs fine with 1 vCPU and 2GB RAM. These warnings can be ignored.
-
-### Issue: Cannot reach backend services
-**Solution**: Ensure IP forwarding is enabled and firewall allows forwarding.
-
 ## Next Steps
 
 - [MkDocs VM](05-mkdocs-vm.md) - VM-104

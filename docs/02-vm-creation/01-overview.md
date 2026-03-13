@@ -137,26 +137,6 @@ Before proceeding to individual VM creation:
 - **Installing Ubuntu on each**: 2-3 hours
 - **Total Day 2**: 4-5 hours
 
-## Common Issues
-
-### Issue: Not enough storage space
-**Solution**: Check ZFS pool capacity:
-```bash
-zpool list
-```
-
-### Issue: Cannot upload ISO
-**Solution**: 
-- Verify storage location has enough space
-- Try alternative upload method via command line
-- Check browser console for errors
-
-### Issue: Network bridge not configured
-**Solution**: 
-- Check network configuration in Datacenter → Node → Network
-- Ensure both vmbr0 (public) and vmbr2 (private/NAT) are configured
-- See [Network Configuration](../01-preparation/03-network-configuration.md) for setup details
-
 ## Next Steps
 
 Choose your first VM to create:

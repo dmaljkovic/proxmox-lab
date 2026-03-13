@@ -308,30 +308,6 @@ sudo ufw allow from 192.168.192.20 to any port 8000
 - [ ] All server blocks enabled
 - [ ] HTTPS access working for all services
 
-## Common Issues
-
-### Issue: curl shows empty response
-**Solution**: Check if nginx is running: `sudo systemctl status nginx`
-
-### Issue: Certificate validation failed
-**Solution**: Verify DNS is pointing correctly:
-```bash
-nslookup chat.yourdomain.com
-```
-
-### Issue: 502 Bad Gateway
-**Solution**: 
-- Check backend service is running
-- Check firewall allows traffic from nginx-proxy
-- Verify backend IP is correct
-
-### Issue: WebSocket errors in Rocket.Chat
-**Solution**: Ensure these headers are in config:
-```nginx
-proxy_set_header Upgrade $http_upgrade;
-proxy_set_header Connection "upgrade";
-```
-
 ## Next Steps
 
 - [Firewall Configuration](../04-security/01-firewall.md)

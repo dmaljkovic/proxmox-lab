@@ -232,17 +232,6 @@ sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
 
-## Common Issues
-
-### Issue: Disk space warning during install
-**Solution**: 50GB is sufficient for base install. If you need more space, shutdown VM and expand disk in Proxmox before installing Nextcloud.
-
-### Issue: Slow performance during install
-**Solution**: This is normal. Nextcloud VM creation is identical to other VMs. Performance optimization comes later during Nextcloud installation.
-
-### Issue: Cannot boot after installation
-**Solution**: Check boot order in VM options. Ensure hard disk is first in boot sequence.
-
 ## Next Steps
 
 Proceed to:

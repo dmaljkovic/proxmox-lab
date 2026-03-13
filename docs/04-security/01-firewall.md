@@ -144,21 +144,6 @@ sudo ufw status verbose
 - [ ] Firewall enabled on all VMs
 - [ ] Status verified on all VMs
 
-## Common Issues
-
-### Issue: Locked out of SSH
-**Solution**: Access via Proxmox console and disable UFW:
-```bash
-sudo ufw disable
-```
-
-### Issue: Services not reachable
-**Solution**: Check UFW logs:
-```bash
-sudo ufw logging on
-sudo tail -f /var/log/ufw.log
-```
-
 ## Next Steps
 
 - [Fail2Ban Configuration](02-fail2ban.md)

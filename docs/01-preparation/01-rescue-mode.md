@@ -105,17 +105,6 @@ apt install -y wget curl vim
 - [ ] Both NVMe devices identified (`/dev/nvme0n1` and `/dev/nvme1n1`)
 - [ ] Rescue system updated
 
-## Common Issues
-
-### Issue: Cannot connect via SSH
-**Solution**: Wait 3-5 minutes after activating rescue mode for the server to fully boot.
-
-### Issue: Permission denied (password)
-**Solution**: Copy the password exactly as shown in Hetzner Robot (case-sensitive). If still failing, reactivate rescue mode to get a new password.
-
-### Issue: Only one NVMe device visible
-**Solution**: Check Hetzner Robot hardware details. Contact Hetzner support if hardware doesn't match order.
-
 ## Next Steps
 
 Proceed to [ZFS Setup](02-zfs-setup.md) to create your storage pool.

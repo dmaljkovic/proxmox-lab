@@ -258,24 +258,6 @@ Apply:
 sudo netplan apply
 ```
 
-## Common Issues
-
-### Issue: VM won't start
-**Solution**: Check Proxmox logs: Datacenter → Node → Shell → `cat /var/log/syslog | grep 101`
-
-### Issue: Cannot access console
-**Solution**: Try different browser or disable browser extensions blocking WebSocket
-
-### Issue: Network not working
-**Solution**: 
-```bash
-sudo ip link set ens18 up
-sudo dhclient ens18
-```
-
-### Issue: Installation freezes
-**Solution**: Increase VM memory temporarily to 6GB during install, reduce after
-
 ## Next Steps
 
 Proceed to:

@@ -167,26 +167,7 @@ After configuring Nginx reverse proxy:
 - [ ] SSL certificates obtained
 - [ ] Access via domain working
 
-## Common Issues
-
-### Issue: "Access through untrusted domain"
-**Solution**: Check trusted_domains configuration:
-```bash
-sudo nextcloud.occ config:system:get trusted_domains
-```
-
-### Issue: Infinite redirect loop
-**Solution**: Ensure trusted_proxies is set:
-```bash
-sudo nextcloud.occ config:system:get trusted_proxies
-```
-
-### Issue: SSL certificate errors
-**Solution**: Check overwriteprotocol setting:
-```bash
-sudo nextcloud.occ config:system:get overwriteprotocol
-```
-
+(End of file
 ## Next Steps
 
 - [Nginx Reverse Proxy & SSL](03-nginx-reverse-proxy.md)
